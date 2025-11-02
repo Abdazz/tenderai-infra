@@ -1,0 +1,233 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: tenderai-postgres
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-tenderai_bf}
+      POSTGRES_USER: ${DATABASE_USER:-tenderai}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-tenderai_pass}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres-init:/docker-entrypoint-initdb.d
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-tenderai} -d ${DATABASE_NAME:-tenderai_bf}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - tenderai-network
+
+  minio:
+    image: minio/minio:latest
+    container_name: tenderai-minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin123}
+    volumes:
+      - minio-data:/data
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - tenderai-network
+
+  createbuckets:
+    image: minio/mc:latest
+    container_name: tenderai-createbuckets
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 ${MINIO_ACCESS_KEY:-minioadmin} ${MINIO_SECRET_KEY:-minioadmin123};
+      /usr/bin/mc mb myminio/${MINIO_BUCKET_NAME:-tenderai-bf} --ignore-existing;
+      /usr/bin/mc anonymous set public myminio/${MINIO_BUCKET_NAME:-tenderai-bf}/reports;
+      exit 0;
+      "
+    networks:
+      - tenderai-network
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.api
+    container_name: tenderai-api
+    environment:
+      - DATABASE_URL=postgresql://${DATABASE_USER:-tenderai}:${DATABASE_PASSWORD:-tenderai_pass}@postgres:5432/${DATABASE_NAME:-tenderai_bf}
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin123}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-tenderai-bf}
+      - MINIO_SECURE=false
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_USE_TLS=${SMTP_USE_TLS:-true}
+      - SMTP_USE_SSL=${SMTP_USE_SSL:-false}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-TenderAI BF}
+      - EMAIL_TO=${EMAIL_TO}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LLM_PROVIDER=${LLM_PROVIDER:-groq}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - TIMEZONE=${TIMEZONE:-Africa/Ouagadougou}
+      - CRON_SCHEDULE=${CRON_SCHEDULE:-0 7 * * *}
+      - ENABLE_SCHEDULER=${ENABLE_SCHEDULER:-true}
+      - OCR_ENABLED=${OCR_ENABLED:-true}
+      - OCR_LANGUAGE=${OCR_LANGUAGE:-fra}
+      - PASSLIB_SKIP_WRAPPING_BUG_CHECK=1
+    volumes:
+      - ./settings.yaml:/app/settings.yaml:ro
+      - ./logs:/app/logs
+      - api-cache:/app/cache
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      createbuckets:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - tenderai-network
+
+  ui:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.ui
+    container_name: tenderai-ui
+    environment:
+      - DATABASE_URL=postgresql://${DATABASE_USER:-tenderai}:${DATABASE_PASSWORD:-tenderai_pass}@postgres:5432/${DATABASE_NAME:-tenderai_bf}
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin123}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-tenderai-bf}
+      - MINIO_SECURE=false
+      - API_URL=http://api:8000
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-change-me-in-production}
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here-change-in-production}
+    volumes:
+      - ./settings.yaml:/app/settings.yaml:ro
+      - ./logs:/app/logs
+    ports:
+      - "${UI_PORT:-7860}:7860"
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7860"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - tenderai-network
+
+  worker:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.worker
+    container_name: tenderai-worker
+    environment:
+      - DATABASE_URL=postgresql://${DATABASE_USER:-tenderai}:${DATABASE_PASSWORD:-tenderai_pass}@postgres:5432/${DATABASE_NAME:-tenderai_bf}
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin123}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-tenderai-bf}
+      - MINIO_SECURE=false
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - OCR_ENABLED=${OCR_ENABLED:-true}
+      - OCR_LANGUAGE=${OCR_LANGUAGE:-fra}
+      - OCR_TIMEOUT=${OCR_TIMEOUT:-300}
+      - TESSERACT_PATH=${TESSERACT_PATH:-/usr/bin/tesseract}
+    volumes:
+      - ./settings.yaml:/app/settings.yaml:ro
+      - ./logs:/app/logs
+      - worker-cache:/app/cache
+      - worker-temp:/tmp/ocr
+    depends_on:
+      - postgres
+      - minio
+    restart: unless-stopped
+    networks:
+      - tenderai-network
+
+  # Optional: Monitoring services
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: tenderai-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - tenderai-network
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: tenderai-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./infra/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./infra/grafana/datasources:/etc/grafana/provisioning/datasources
+    restart: unless-stopped
+    networks:
+      - tenderai-network
+    profiles:
+      - monitoring
+
+volumes:
+  postgres-data:
+    driver: local
+  minio-data:
+    driver: local
+  api-cache:
+    driver: local
+  worker-cache:
+    driver: local
+  worker-temp:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+networks:
+  tenderai-network:
+    driver: bridge

@@ -1,0 +1,313 @@
+# TenderAI BF Configuration File
+# Production-grade settings for multi-agent RFP harvester
+
+# Application Settings
+app_name: "TenderAI BF"
+app_version: "1.0.0" 
+environment: "production"  # Options: development, staging, production
+debug: false
+log_level: "INFO"
+
+# Database Configuration
+database:
+  url: "${TENDERAI_DATABASE_URL}"  # PostgreSQL connection string
+  pool_size: 10
+  max_overflow: 20
+  pool_timeout: 30
+  pool_recycle: 3600
+
+# Email Configuration
+email:
+  smtp_server: "${TENDERAI_SMTP_SERVER}"
+  smtp_port: 587
+  smtp_use_tls: true
+  smtp_username: "${TENDERAI_SMTP_USERNAME}"
+  smtp_password: "${TENDERAI_SMTP_PASSWORD}"
+  from_address: "${TENDERAI_FROM_EMAIL}"
+  to_address: "${TENDERAI_TO_EMAIL}"
+  reply_to: "${TENDERAI_FROM_EMAIL}"
+  
+  # Email templates (French)
+  subject_template: "🔍 TenderAI BF - Rapport d'appels d'offres {date}"
+  body_template: |
+    Bonjour,
+    
+    Veuillez trouver ci-joint le rapport des appels d'offres pour la date du {date}.
+    
+    Résumé :
+    - {total_items} appels d'offres trouvés
+    - {relevant_items} pertinents pour l'IT/Ingénierie
+    - {urgent_items} avec échéances urgentes
+    
+    Cordialement,
+    TenderAI BF
+
+# Storage Configuration (MinIO/S3)
+storage:
+  endpoint_url: "${TENDERAI_STORAGE_ENDPOINT}"
+  access_key: "${TENDERAI_STORAGE_ACCESS_KEY}"
+  secret_key: "${TENDERAI_STORAGE_SECRET_KEY}"
+  bucket_name: "${TENDERAI_STORAGE_BUCKET}"
+  region: "us-east-1"
+  use_ssl: true
+  create_bucket: true
+
+# Pipeline Configuration
+pipeline:
+  max_items_per_source: 100
+  max_total_items: 500
+  timeout_seconds: 3600  # 1 hour
+  retry_attempts: 3
+  retry_delay: 5
+  
+  # Rate limiting
+  default_rate_limit: "10/m"  # 10 requests per minute
+  respect_robots_txt: true
+  user_agent: "TenderAI-BF/1.0 (+https://github.com/your-org/tenderai-bf)"
+
+# Scheduler Configuration
+scheduler:
+  enabled: true
+  timezone: "Africa/Ouagadougou"
+  cron_schedule: "30 7 * * 1-5"  # 7:30 AM, Monday to Friday
+  max_concurrent_runs: 1
+  catch_up: false
+
+# LangChain/LangGraph Configuration
+langchain:
+  # Default LLM settings (update with your provider)
+  llm_provider: "openai"  # Options: openai, anthropic, azure_openai
+  model_name: "gpt-4o-mini"
+  temperature: 0.1
+  max_tokens: 1000
+  api_key: "${LANGCHAIN_API_KEY}"
+  
+  # For Azure OpenAI (uncomment if using)
+  # azure_endpoint: "${AZURE_OPENAI_ENDPOINT}"
+  # azure_deployment: "${AZURE_OPENAI_DEPLOYMENT}"
+  # api_version: "2024-02-01"
+
+# Sources Configuration
+sources:
+  # Burkina Faso Government Portals
+  - name: "Portail des Marchés Publics du Burkina Faso"
+    list_url: "https://www.marchespublics.gov.bf/index.php?page=avis.avis"
+    item_url_pattern: "https://www.marchespublics.gov.bf/index.php?page=avis.details&id={id}"
+    parser: "html"
+    rate_limit: "5/m"
+    enabled: true
+    selectors:
+      title: ".avis-title, .title, h2, h3"
+      description: ".avis-description, .description, .content p"
+      deadline: ".deadline, .date-limite, .echeance"
+      organization: ".organization, .organisme, .ministere"
+      category: ".category, .categorie, .type"
+    
+  - name: "ARMP - Autorité de Régulation des Marchés Publics"
+    list_url: "https://www.armp.bf/index.php?page=avis-appel-offres"
+    item_url_pattern: "https://www.armp.bf/index.php?page=avis-details&id={id}"
+    parser: "html" 
+    rate_limit: "8/m"
+    enabled: true
+    selectors:
+      title: ".title, h2"
+      description: ".description, .content"
+      deadline: ".deadline, .date"
+      organization: ".organization"
+      
+  - name: "Ministère de la Transition Digitale"
+    list_url: "https://www.mtd.gov.bf/index.php?page=appels-offres"
+    item_url_pattern: "https://www.mtd.gov.bf/index.php?page=appel-offre&id={id}"
+    parser: "html"
+    rate_limit: "10/m"
+    enabled: true
+    selectors:
+      title: ".ao-title, h2"
+      description: ".ao-description"
+      deadline: ".ao-deadline"
+      
+  # Additional sources (update with real URLs)
+  - name: "FASONORM - Agence Burkinabè de Normalisation"
+    list_url: "https://www.fasonorm.bf/appels-offres"
+    parser: "html"
+    rate_limit: "6/m"
+    enabled: false  # Disabled by default, enable when URL is confirmed
+    
+  - name: "Ministère de l'Économie et des Finances"
+    list_url: "https://www.finances.gov.bf/marches-publics"
+    parser: "html"
+    rate_limit: "8/m"
+    enabled: false
+
+# Classification Settings
+classification:
+  relevant_keywords:
+    it_services:
+      - "informatique"
+      - "logiciel"
+      - "développement"
+      - "application"
+      - "système d'information"
+      - "base de données"
+      - "réseau"
+      - "cybersécurité"
+      - "cloud"
+      - "numérique"
+      - "digital"
+      - "site web"
+      - "plateforme"
+      - "e-gouvernement"
+      - "gestion électronique"
+      
+    engineering:
+      - "ingénierie"
+      - "génie civil"
+      - "infrastructure"
+      - "construction"
+      - "BTP"
+      - "routes"
+      - "bâtiment"
+      - "électricité"
+      - "télécommunications"
+      - "énergie"
+      - "hydraulique"
+      - "assainissement"
+      
+    consulting:
+      - "conseil"
+      - "consultance"
+      - "étude"
+      - "expertise"
+      - "assistance technique"
+      - "formation"
+      - "audit"
+      - "évaluation"
+      
+  minimum_relevance_score: 0.3
+  use_llm_classification: true
+
+# Report Configuration
+report:
+  template_path: "templates/report_template.docx"
+  include_screenshots: false
+  include_source_urls: true
+  max_items_in_summary: 20
+  
+  # Report sections
+  sections:
+    - title: "Résumé Exécutif"
+      type: "executive_summary"
+    - title: "Appels d'Offres IT"
+      type: "filtered_notices"
+      filter: "it_services"
+    - title: "Appels d'Offres Ingénierie"
+      type: "filtered_notices"
+      filter: "engineering"
+    - title: "Autres Opportunités"
+      type: "filtered_notices" 
+      filter: "other"
+    - title: "Annexes"
+      type: "appendices"
+
+# Recipients Configuration
+recipients:
+  - name: "Équipe Direction"
+    email: "${TENDERAI_TO_EMAIL}"
+    type: "primary"
+    
+  # Add additional recipients as needed
+  # - name: "Équipe Commercial"
+  #   email: "commercial@yourcompany.com"
+  #   type: "secondary"
+
+# Logging Configuration
+logging:
+  version: 1
+  disable_existing_loggers: false
+  
+  formatters:
+    json:
+      format: '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "message": "%(message)s"}'
+    simple:
+      format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+      
+  handlers:
+    console:
+      class: logging.StreamHandler
+      level: INFO
+      formatter: simple
+      stream: ext://sys.stdout
+      
+    file:
+      class: logging.handlers.RotatingFileHandler
+      level: DEBUG
+      formatter: json
+      filename: logs/tenderai.log
+      maxBytes: 10485760  # 10MB
+      backupCount: 5
+      
+  loggers:
+    tenderai_bf:
+      level: DEBUG
+      handlers: [console, file]
+      propagate: false
+      
+    httpx:
+      level: WARNING
+      handlers: [console]
+      
+    urllib3:
+      level: WARNING
+      handlers: [console]
+      
+  root:
+    level: INFO
+    handlers: [console]
+
+# Monitoring and Metrics
+monitoring:
+  enable_metrics: true
+  metrics_port: 8000
+  health_check_endpoint: "/health"
+  
+  # Prometheus metrics (if using)
+  prometheus:
+    enabled: false
+    port: 9090
+    path: "/metrics"
+
+# Security Settings
+security:
+  # JWT Authentication
+  jwt_secret_key: "${TENDERAI_JWT_SECRET:-change-this-secret-key-in-production-use-openssl-rand-hex-32}"
+  jwt_algorithm: "HS256"
+  jwt_access_token_expire_minutes: 1440  # 24 hours
+  
+  # Admin credentials (for initial setup - move to database later)
+  admin_username: "${TENDERAI_ADMIN_USERNAME:-admin}"
+  admin_password: "${TENDERAI_ADMIN_PASSWORD:-admin123}"  # CHANGE IN PRODUCTION!
+  
+  # Security limits
+  max_file_size_mb: 100
+  allowed_file_types: [".pdf", ".doc", ".docx", ".html", ".txt"]
+  max_request_timeout: 60
+  
+  # User agent rotation (optional)
+  rotate_user_agents: false
+  user_agents:
+    - "TenderAI-BF/1.0"
+    - "Mozilla/5.0 (compatible; TenderAI-BF/1.0)"
+
+# Development/Testing Settings
+development:
+  mock_external_apis: false
+  save_debug_files: false
+  debug_output_dir: "debug/"
+  
+  # Test data
+  use_test_sources: false
+  test_sources:
+    - name: "Test Source"
+      list_url: "https://httpbin.org/html"
+      parser: "html"
+      rate_limit: "1/s"
