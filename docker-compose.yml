@@ -77,22 +77,39 @@ services:
       - SMTP_USE_SSL=${SMTP_USE_SSL:-false}
       - EMAIL_FROM=${EMAIL_FROM}
       - EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-TenderAI BF}
-      - EMAIL_TO=${EMAIL_TO}
+      - EMAIL_TO_ADDRESS=${EMAIL_TO_ADDRESS}
+      - EMAIL_REPLY_TO=${EMAIL_REPLY_TO}
       - GROQ_API_KEY=${GROQ_API_KEY}
+      - GROQ_MODEL=${GROQ_MODEL:-llama-3.3-70b-versatile}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4-turbo-preview}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.1}
       - LLM_PROVIDER=${LLM_PROVIDER:-groq}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - TIMEZONE=${TIMEZONE:-Africa/Ouagadougou}
+      - USE_DATABASE_SOURCES=${USE_DATABASE_SOURCES:-false}
       - CRON_SCHEDULE=${CRON_SCHEDULE:-0 7 * * *}
       - ENABLE_SCHEDULER=${ENABLE_SCHEDULER:-true}
       - OCR_ENABLED=${OCR_ENABLED:-true}
       - OCR_LANGUAGE=${OCR_LANGUAGE:-fra}
       - PASSLIB_SKIP_WRAPPING_BUG_CHECK=1
+      # Docling and ML model caches
+      - HF_HOME=/app/cache/huggingface
+      - TRANSFORMERS_CACHE=/app/cache/huggingface
+      - TORCH_HOME=/app/cache/torch
+      - EASYOCR_MODULE_PATH=/app/cache/easyocr
     volumes:
+      # Configuration
       - ./settings.yaml:/app/settings.yaml:ro
       - ./logs:/app/logs
       - api-cache:/app/cache
+      # Mount source code for hot reload (no rebuild needed after code changes)
+      - ./src:/app/src
+      - ./alembic:/app/alembic
+      - ./tests:/app/tests
+    command: ["uvicorn", "tenderai_bf.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     ports:
       - "${API_PORT:-8000}:8000"
     depends_on:
@@ -107,6 +124,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     networks:
       - tenderai-network
@@ -129,8 +148,11 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-change-me-in-production}
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-here-change-in-production}
     volumes:
+      # Configuration
       - ./settings.yaml:/app/settings.yaml:ro
       - ./logs:/app/logs
+      # Mount source code for hot reload (no rebuild needed after code changes)
+      - ./src:/app/src
     ports:
       - "${UI_PORT:-7860}:7860"
     depends_on:
@@ -163,10 +185,13 @@ services:
       - OCR_TIMEOUT=${OCR_TIMEOUT:-300}
       - TESSERACT_PATH=${TESSERACT_PATH:-/usr/bin/tesseract}
     volumes:
+      # Configuration
       - ./settings.yaml:/app/settings.yaml:ro
       - ./logs:/app/logs
       - worker-cache:/app/cache
       - worker-temp:/tmp/ocr
+      # Mount source code for hot reload (no rebuild needed after code changes)
+      - ./src:/app/src
     depends_on:
       - postgres
       - minio

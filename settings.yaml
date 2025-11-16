@@ -62,7 +62,7 @@ pipeline:
   
   # Rate limiting
   default_rate_limit: "10/m"  # 10 requests per minute
-  respect_robots_txt: true
+  respect_robots_txt: false
   user_agent: "TenderAI-BF/1.0 (+https://github.com/your-org/tenderai-bf)"
 
 # Scheduler Configuration
@@ -76,11 +76,15 @@ scheduler:
 # LangChain/LangGraph Configuration
 langchain:
   # Default LLM settings (update with your provider)
-  llm_provider: "openai"  # Options: openai, anthropic, azure_openai
+  llm_provider: "openai"  # Options: openai, anthropic, azure_openai, groq, ollama
   model_name: "gpt-4o-mini"
   temperature: 0.1
   max_tokens: 1000
   api_key: "${LANGCHAIN_API_KEY}"
+  
+  # Ollama settings (for local LLM deployment)
+  ollama_base_url: "${OLLAMA_BASE_URL:-http://host.docker.internal:11434}"  # Ollama server endpoint
+  ollama_model: "${OLLAMA_MODEL:-llama3.1}"  # Model name in Ollama (e.g., llama3.1, mistral, mixtral)
   
   # For Azure OpenAI (uncomment if using)
   # azure_endpoint: "${AZURE_OPENAI_ENDPOINT}"
@@ -89,55 +93,64 @@ langchain:
 
 # Sources Configuration
 sources:
-  # Burkina Faso Government Portals
-  - name: "Portail des Marchés Publics du Burkina Faso"
-    list_url: "https://www.marchespublics.gov.bf/index.php?page=avis.avis"
-    item_url_pattern: "https://www.marchespublics.gov.bf/index.php?page=avis.details&id={id}"
-    parser: "html"
+
+  - name: "DGCMEF - Direction Générale du Contrôle des Marchés Publics"
+    list_url: "https://www.dgcmef.gov.bf/fr/appels-d-offre"
+    parser: "pdf_quotidien"  # Special parser for daily bulletin PDFs
+    rate_limit: "5/m"
+    enabled: false
+    description: "Quotidiens des marchés publics (PDF bulletins)"
+    # Specific settings for DGCMEF
+    quotidien_settings:
+      fetch_latest_only: true  # Only fetch the most recent bulletin
+      table_selector: "table"  # CSS selector for the quotidien table
+      title_column: 0  # First column contains the title
+      pdf_column: 1    # Second column contains the PDF link
+
+  - name: "DGCMEF RAG - PDF Quotidien avec RAG"
+    list_url: "https://www.dgcmef.gov.bf/fr/appels-d-offre"
+    parser: "pdf_rag"  # RAG-based parser for PDF extraction using Chroma + LLM
     rate_limit: "5/m"
     enabled: true
-    selectors:
-      title: ".avis-title, .title, h2, h3"
-      description: ".avis-description, .description, .content p"
-      deadline: ".deadline, .date-limite, .echeance"
-      organization: ".organization, .organisme, .ministere"
-      category: ".category, .categorie, .type"
-    
-  - name: "ARMP - Autorité de Régulation des Marchés Publics"
-    list_url: "https://www.armp.bf/index.php?page=avis-appel-offres"
-    item_url_pattern: "https://www.armp.bf/index.php?page=avis-details&id={id}"
-    parser: "html" 
-    rate_limit: "8/m"
-    enabled: true
-    selectors:
-      title: ".title, h2"
-      description: ".description, .content"
-      deadline: ".deadline, .date"
-      organization: ".organization"
-      
-  - name: "Ministère de la Transition Digitale"
-    list_url: "https://www.mtd.gov.bf/index.php?page=appels-offres"
-    item_url_pattern: "https://www.mtd.gov.bf/index.php?page=appel-offre&id={id}"
-    parser: "html"
+    description: "Quotidiens des marchés publics parsed with RAG system"
+    # RAG-specific settings
+    rag_settings:
+      use_llm: true  # Use LLM for tender extraction
+      chunk_size: 512
+      top_k_results: 5
+    quotidien_settings:
+      fetch_latest_only: true
+      table_selector: "table"
+      title_column: 0
+      pdf_column: 1
+
+  - name: "Joffres.net - Appels d'Offres Publics"
+    list_url: "https://www.joffres.net/appel-offres-publics"
+    item_url_pattern: "https://www.joffres.net/appeloffre/{slug}"
+    parser: "html-listing"  # HTML listing pages with detail links
     rate_limit: "10/m"
-    enabled: true
-    selectors:
-      title: ".ao-title, h2"
-      description: ".ao-description"
-      deadline: ".ao-deadline"
-      
-  # Additional sources (update with real URLs)
-  - name: "FASONORM - Agence Burkinabè de Normalisation"
-    list_url: "https://www.fasonorm.bf/appels-offres"
-    parser: "html"
-    rate_limit: "6/m"
-    enabled: false  # Disabled by default, enable when URL is confirmed
-    
-  - name: "Ministère de l'Économie et des Finances"
-    list_url: "https://www.finances.gov.bf/marches-publics"
-    parser: "html"
-    rate_limit: "8/m"
     enabled: false
+    description: "Plateforme collaborative d'appels d'offres publics"
+    joffres_settings:
+      item_selector: ".tender-item, .appel-offre, [data-tender]"
+      slug_attribute: "data-slug"
+      title_selector: ".tender-title, h3"
+      entity_selector: ".entity-name, .company"
+      deadline_selector: ".deadline, .date-limite"
+
+  - name: "Joffres.net - Appels d'Offres Privés"
+    list_url: "https://www.joffres.net/appel-offres-priv%C3%A9s"
+    item_url_pattern: "https://www.joffres.net/appeloffre/{slug}"
+    parser: "html-listing"  # HTML listing pages with detail links
+    rate_limit: "10/m"
+    enabled: false
+    description: "Plateforme collaborative d'appels d'offres privés"
+    joffres_settings:
+      item_selector: ".tender-item, .appel-offre, [data-tender]"
+      slug_attribute: "data-slug"
+      title_selector: ".tender-title, h3"
+      entity_selector: ".entity-name, .company"
+      deadline_selector: ".deadline, .date-limite"
 
 # Classification Settings
 classification:
@@ -183,8 +196,269 @@ classification:
       - "audit"
       - "évaluation"
       
-  minimum_relevance_score: 0.3
-  use_llm_classification: true
+    it_hardware:
+      - "équipement informatique"
+      - "matériel informatique"
+      - "ordinateur"
+      - "serveur"
+      - "poste de travail"
+      - "matériel de bureau"
+      - "imprimante"
+      - "scanner"
+      - "photocopieur"
+      - "disque dur"
+      - "mémoire RAM"
+      - "processeur"
+      - "carte graphique"
+      - "carte mère"
+      - "alimentation électrique"
+      - "onduleur"
+      - "batterie"
+      - "câbles"
+      - "connecteurs"
+      - "accessoires informatiques"
+      - "écran"
+      - "moniteur"
+      - "clavier"
+      - "souris"
+      - "hub USB"
+      - "adaptateur"
+      - "routeur"
+      - "switch réseau"
+      - "modem"
+      - "point d'accès wifi"
+      - "disque SSD"
+      - "lecteur optique"
+      - "webcam"
+      - "microphone"
+      - "enceinte"
+      - "casque audio"
+
+# RAG (Retrieval-Augmented Generation) Settings
+rag:
+  enabled: true
+  vector_db: "chroma"  # Vector database backend
+  embedding_model: "intfloat/multilingual-e5-large-instruct"  # Sentence-transformers model for embeddings
+  chunk_size: 76800  # Size of text chunks for indexing (increased to reduce number of chunks and API calls)
+  chunk_overlap: 2400  # Overlap between chunks for context preservation
+  top_k_results: 10  # Number of similar chunks to retrieve
+  
+  # Chroma specific settings
+  chroma:
+    persist_directory: "./data/chroma_db"  # Directory to persist vector database
+    collection_prefix: "tenders"  # Prefix for collection names
+    host: null  # Leave null for embedded mode, or set hostname for server mode
+    port: null  # Leave null for embedded mode
+    
+    # Metadata to track with each chunk
+    track_metadata:
+      - source
+      - date
+      - filename
+      - page_number
+      - tender_id
+    
+    # Query for vector similarity search (used to find relevant documents)
+    # This should be in the same language as the documents and capture what we're looking for
+    vector_search_query: "Extraire les appels d'offres publics, entités, dates limites, et pertinence IT/Ingénierie"
+
+# Prompts Configuration (French language for better results with French documents)
+prompts:
+  extraction:
+    system: |
+      Vous êtes un expert des marchés publics chargé d’extraire, à partir d’un extrait de document (chunk), les informations relatives :
+      - aux NOUVEAUX appels d’offres ;
+      - aux AVIS liés à des appels d’offres existants (communiqués, rectificatifs, prorogations, annulations, etc.).
+
+      Le texte fourni peut être incomplet : vous ne voyez qu’une partie du document.
+      Par conséquent :
+      - Vous ne devez JAMAIS inventer d’informations qui ne sont pas clairement présentes dans le texte.
+      - Vous ne devez créer un élément que si le texte décrit clairement un appel d’offres ou un avis lié à un appel d’offres.
+      - Si une information attendue n’est pas présente dans le texte, vous laissez le champ vide / null lorsque le schéma le permet, ou utilisez une valeur générique neutre comme "Inconnu" plutôt que d’inventer.
+      - Si l’extrait ne contient aucun appel d’offres ni avis lié, clairement identifiable, la liste `tenders` doit être vide.
+
+      Types d’éléments à extraire (champ `type`) :
+      - "appel_offres"   : nouveau lancement d’appel d’offres ;
+      - "rectificatif"   : avis rectifiant ou corrigeant un appel d’offres existant ;
+      - "prorogation"    : avis prolongeant la date limite de soumission ;
+      - "communique"     : communiqué officiel apportant des précisions ou informations complémentaires sur un appel d’offres ;
+      - "annulation"     : avis d’annulation d’un appel d’offres ;
+      - "autre"          : tout autre avis lié aux marchés publics ne rentrant pas clairement dans les catégories précédentes.
+
+      Vous devez IGNORER absolument les avis d’attribution / résultats,
+
+      Pour chaque élément (appel d’offres ou avis) que vous extrayez, vous devez remplir les champs du schéma de sortie comme suit :
+
+      - type :
+          * Utiliser STRICTEMENT l’une des valeurs suivantes : "appel_offres", "rectificatif", "prorogation", "communique", "annulation", "autre".
+          * Si le texte décrit un nouveau lancement d’appel d’offres, utiliser "appel_offres".
+          * Si le texte décrit une modification, une correction ou une précision, choisir le type le plus approprié ("rectificatif", "prorogation", "communique", "annulation", ou "autre").
+
+      - entity :
+          * Entité ou organisme émetteur de l’appel d’offres ou de l’avis.
+          * Utiliser le libellé exact du texte lorsque possible.
+          * Si l’entité est totalement absente du texte et ne peut pas être déduite, utiliser "Inconnu" plutôt que d’inventer un nom précis.
+
+      - reference :
+          * Numéro de référence ou identifiant de l’appel d’offres, si présent.
+          * Exemple : "N°2025-0095-/MEF/SG/DMP".
+          * Si aucun identifiant n’est clairementment mentionné, utiliser "Inconnu" plutôt que d’en inventer un.
+
+      - tender_object :
+          * Reprendre l’objet de l’appel d’offres ou de l’avis tel qu’il apparaît dans le document.
+          * Il s’agit généralement du titre ou de la ligne/phrase qui résume immédiatement l’objet principal (par exemple : "Acquisition de fournitures de bureau et de produits d'entretien au profit de la DCIM.").
+          * Ne JAMAIS résumer ni reformuler ce champ : le texte doit être copié aussi fidèlement que possible depuis le document (hors artefacts de mise en page).
+
+      - deadline :
+          * Date limite de dépôt des offres, lorsque l’élément concerne un appel d’offres ou une prorogation.
+          * Normaliser si possible au format "DD-MM-YYYY".
+          * Si la date est absente ou ambiguë dans l’extrait, laisser ce champ vide / null.
+
+      - description :
+          * Fournir une description détaillée de l’appel d’offres ou de l’avis, basée STRICTEMENT sur le texte de l'appel ou de l'avis.
+          * Cette description doit faore ressortir les informations importantes : nature des travaux ou prestations, principaux lieux d’exécution, lots éventuels, éléments essentiels des conditions de participation, etc.
+          * Si le texte source est très long (plusieurs paragraphes), vous POUVEZ produire une version résumée, à condition de rester fidèle aux informations présentes.
+          * Ne pas inventer de nouvelles informations ; ne résumer que ce qui est réellement présent dans le texte.
+
+      - category :
+          * Catégorie de l’appel d’offres, en utilisant des valeurs homogènes (par exemple "IT", "Ingénierie", "Services", "Biens", "Travaux", "Autre").
+          * Choisir la valeur la plus cohérente avec la nature de l’objet (informatique / ingénierie / services / biens / autre).
+          * Si vous hésitez fortement, utiliser "Autre" plutôt que de forcer une catégorie inappropriée.
+
+      - keywords :
+          * Liste de 3 à 10 mots ou expressions clés réellement pertinents et directement liés au texte.
+          * Exemple : ["fourniture de matériel informatique", "serveurs", "installation", "maintenance"].
+          * Ne pas ajouter de mots-clés qui ne sont pas supportés par le texte.
+
+      - relevance_score :
+          * Score de pertinence entre 0.0 et 1.0 indiquant à quel point le texte décrit clairement un appel d’offres ou un avis lié à un appel d’offres.
+          * 1.0 : informations très claires, structure d’avis / appel d’offres explicite.
+          * ≈0.5 : informations partielles mais manifestement en lien avec un appel d’offres.
+          * 0.0 : ne pas créer d’élément dans `tenders` dans ce cas.
+
+      - budget :
+          * Indiquer uniquement si un montant ou un budget est explicitement mentionné dans le texte.
+          * Exemple : "250 000 000 FCFA".
+          * Sinon, laisser ce champ vide / null.
+
+      - location :
+          * Localisation géographique (ville, région, pays) si elle est clairement identifiable dans le texte.
+          * Sinon, laisser ce champ vide / null.
+
+      - source_url :
+          * URL ou référence de la source si elle apparaît explicitement dans le texte.
+          * Sinon, laisser ce champ vide / null.
+
+      Champs globaux du conteneur :
+      - total_extracted :
+          * Nombre total d’éléments (appels d’offres et avis) extraits à partir de l’extrait fourni.
+          * Doit être égal à la longueur de la liste `tenders`.
+
+      - confidence :
+          * Niveau global de confiance, entre 0.0 et 1.0, reflétant la fiabilité de l’extraction pour cet extrait.
+          * Plus les entités, références, deadlines et descriptions sont claires et cohérentes, plus la confiance doit être élevée.
+          * Ne pas mettre systématiquement 1.0 ; adapter en fonction de la qualité réelle des informations.
+
+      RÈGLES IMPORTANTES :
+      - Vous ne devez jamais inventer de noms d’entités, de références ou de montants plausibles.
+      - Vous devez vous contenter de ce qui est explicitement présent ou raisonnablement déductible sans extrapolation.
+      - Vous ne devez pas ajouter de texte explicatif en dehors des champs du schéma de sortie.
+      - Si le texte est trop fragmentaire pour caractériser clairement un appel d’offres ou un avis, n’extrayez rien pour cet élément.
+
+    user_template: |
+      Analysez l’extrait suivant et extrayez tous les nouveaux appels d’offres et tous les avis (communiqués, rectificatifs, prorogations, annulations, etc.) qui y sont liés :
+      
+      {context}
+
+  # Classification prompt - Used to determine if a tender is relevant
+  classification:
+    system: |
+      Vous êtes un expert en marchés publics spécialisé dans l'identification des appels d'offres pertinents pour les secteurs de l'informatique, l'ingénierie, les réseaux et systèmes informatiques, télécommunications, big data, intelligence artificielle et fourniture de matériels informatiques et consommables bureautiques.
+      
+      Votre mission est d'analyser chaque appel d'offres et de déterminer sa pertinence selon les critères suivants :
+      
+      PERTINENT SI :
+      - Concerne les technologies de l'information (logiciels, systèmes, digitalisation, e-services, réseaux, cybersécurité, cloud, intelligence artificielle, big data, etc.)
+      - Concerne l'ingénierie (télécommunications, etc.)
+      - Inclut des services de conseil ou d'assistance technique dans ces domaines
+      - Fourniture d'équipements informatiques et consommables bureautiques ou techniques
+      
+      NON PERTINENT SI :
+      - Services de nettoyage ou d'entretien général
+      - Fournitures alimentaires ou médicales
+      - Véhicules ou transport (sauf si lié à l'Informatique/Ingénierie)
+      
+      Pour chaque appel d'offres, fournissez :
+      - is_relevant : true ou false
+      - confidence : Niveau de confiance de 0.0 à 1.0
+      - reasoning : Brève explication de votre décision
+      - suggested_category : "Informatique", "Ingénierie", "Matériels informatiques", ou "Autre"
+    
+    user_template: |
+      Analysez la pertinence de cet appel d'offres :
+      
+      Entité : {entity}
+      Référence : {reference}
+      Objet : {objet}
+      Description : {description}
+      Mots-clés : {keywords}
+      
+      Est-ce pertinent pour les secteurs "Informatique", "Ingénierie", "Matériels informatiques" ?
+  
+  # Summarization prompt - Used to create summaries for reports
+  summarization:
+    system: |
+      Vous êtes un rédacteur spécialisé dans la synthèse d'informations sur les marchés publics.
+      
+      Créez des résumés clairs, concis et informatifs qui permettent aux décideurs de comprendre rapidement :
+      - L'objet de l'appel d'offres
+      - Les exigences principales
+      - Les délais importants
+      - Les opportunités potentielles
+      
+      Rédigez en français professionnel, en utilisant des phrases courtes et précises.
+    
+    user_template: |
+      Créez un résumé concis (2-3 phrases) pour cet appel d'offres :
+      
+      {tender_details}
+  
+  # Deduplication prompt - Used to identify duplicate tenders
+  deduplication:
+    system: |
+      Vous êtes un expert en identification des doublons dans les appels d'offres.
+      
+      Comparez les appels d'offres et déterminez s'ils sont identiques, même si :
+      - La formulation diffère légèrement
+      - Les dates de publication varient
+      - Les sources sont différentes
+      
+      Deux appels d'offres sont des DOUBLONS si :
+      - Même entité émettrice
+      - Même référence ou numéro
+      - Même objet/description principale
+      - Même date limite
+      
+      Ils sont DIFFÉRENTS si :
+      - Objets distincts même si entité identique
+      - Références différentes
+      - Dates limites différentes (écart > 2 jours)
+    
+    user_template: |
+      Comparez ces deux appels d'offres et déterminez s'il s'agit d'un doublon :
+      
+      APPEL D'OFFRES 1 :
+      {tender1}
+      
+      APPEL D'OFFRES 2 :
+      {tender2}
+      
+      Répondez avec : is_duplicate (true/false), confidence (0.0-1.0), reasoning (explication)
+
+# Processing Settings (includes relevance threshold)
+processing:
+  min_relevance_score: 0.0  # Threshold for RAG results (0.0 = all items, 1.0 = only perfect matches)
+  use_llm_classification: true  # If true, use LLM for classification; if false, use keyword matching
 
 # Report Configuration
 report:
@@ -308,6 +582,6 @@ development:
   use_test_sources: false
   test_sources:
     - name: "Test Source"
-      list_url: "https://httpbin.org/html"
-      parser: "html"
+      list_url: "https://www.arcop.bf/appels-doffres/"
+      parser: "pdf"
       rate_limit: "1/s"
