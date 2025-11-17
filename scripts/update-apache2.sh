@@ -99,8 +99,8 @@ else
 fi
 
 # Reload or restart Apache
-if [ "$MODULES_ENABLED" = true ]; then
-    echo "🔄 Restarting Apache (modules were enabled)..."
+if [ "$MODULES_ENABLED" = true ] || [ -f "/etc/apache2/sites-available/tender-ai.yulcom.net.conf" ]; then
+    echo "🔄 Restarting Apache (SSL proxy configuration requires restart)..."
     sudo systemctl restart $APACHE_SERVICE
     echo "✅ Apache restarted"
 else
