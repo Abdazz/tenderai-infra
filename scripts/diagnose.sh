@@ -53,23 +53,33 @@ echo ""
 
 echo "🌐 Connectivity Tests:"
 echo "  Testing Nginx Docker (internal)..."
-if curl -k -s https://localhost:18443/health > /dev/null 2>&1; then
-    echo "  ✅ Nginx Docker (18443) responds"
-else
-    echo "  ❌ Nginx Docker (18443) not responding"
-    echo "     Trying HTTP fallback..."
-    if curl -s http://localhost:18080/health > /dev/null 2>&1; then
-        echo "     ⚠️  Nginx HTTP (18080) responds but HTTPS (18443) doesn't"
+if docker-compose ps nginx 2>/dev/null | grep -q -E "(Up|Running)"; then
+    echo "  ✅ Nginx Docker container is running"
+    if curl -k -s https://localhost:18443/health > /dev/null 2>&1; then
+        echo "  ✅ Nginx Docker (18443) responds"
     else
-        echo "     ❌ Neither HTTP nor HTTPS responding"
+        echo "  ❌ Nginx Docker (18443) not responding"
+        echo "     Trying HTTP fallback..."
+        if curl -s http://localhost:18080/health > /dev/null 2>&1; then
+            echo "     ⚠️  Nginx HTTP (18080) responds but HTTPS (18443) doesn't"
+        else
+            echo "     ❌ Neither HTTP nor HTTPS responding"
+        fi
     fi
+else
+    echo "  ❌ Nginx Docker container is not running"
 fi
 
 echo "  Testing Apache2 proxy (external)..."
-if curl -s -I https://tender-ai.yulcom.net/health 2>/dev/null | grep -q "200\|301\|302"; then
-    echo "  ✅ External access works"
+if curl -s -I https://tender-ai.yulcom.net/health 2>/dev/null | grep -q "200\|301\|302\|500"; then
+    RESPONSE_CODE=$(curl -s -I https://tender-ai.yulcom.net/health 2>/dev/null | grep "HTTP/" | tail -1 | cut -d' ' -f2)
+    if [ "$RESPONSE_CODE" = "500" ]; then
+        echo "  ❌ External access returns 500 Internal Server Error"
+    else
+        echo "  ✅ External access works (HTTP $RESPONSE_CODE)"
+    fi
 else
-    echo "  ❌ External access fails"
+    echo "  ❌ External access fails (no response)"
 fi
 echo ""
 
