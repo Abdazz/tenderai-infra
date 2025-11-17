@@ -53,14 +53,14 @@ fi
 echo "✅ Found: $APACHE_CMD"
 echo ""
 
-# Enable required modules
+# Enable required Apache modules
 echo "📦 Enabling required Apache modules..."
 if [ "$APACHE_CMD" = "apache2" ]; then
-    sudo a2enmod proxy proxy_http proxy_wstunnel ssl headers rewrite 2>/dev/null || true
+    sudo a2enmod proxy proxy_http proxy_wstunnel ssl headers rewrite proxy_connect 2>/dev/null || true
     echo "✅ Modules enabled"
 else
     echo "ℹ️  For httpd, ensure these modules are enabled in httpd.conf:"
-    echo "   - mod_proxy, mod_proxy_http, mod_proxy_wstunnel"
+    echo "   - mod_proxy, mod_proxy_http, mod_proxy_wstunnel, mod_proxy_connect"
     echo "   - mod_ssl, mod_headers, mod_rewrite"
 fi
 echo ""
@@ -145,3 +145,5 @@ echo "View logs:"
 echo "  Apache2: sudo tail -f /var/log/apache2/tender-ai.yulcom.net-ssl-error.log"
 echo "  Nginx:   docker-compose logs -f nginx"
 echo ""
+echo "If you still get errors, run diagnostics:"
+echo "  ./scripts/diagnose.sh"
