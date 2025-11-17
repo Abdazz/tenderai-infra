@@ -64,44 +64,18 @@ services:
       context: .
       dockerfile: infra/Dockerfile.api
     container_name: tenderai-api
+    env_file: .env
     environment:
+      # Docker internal networking
       - DATABASE_URL=postgresql://${DATABASE_USER:-tenderai}:${DATABASE_PASSWORD:-tenderai_pass}@postgres:5432/${DATABASE_NAME:-tenderai_bf}
       - MINIO_ENDPOINT=minio:9000
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin123}
-      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-tenderai-bf}
       - MINIO_SECURE=false
-      - SMTP_HOST=${SMTP_HOST}
-      - SMTP_PORT=${SMTP_PORT:-587}
-      - SMTP_USER=${SMTP_USER}
-      - SMTP_PASSWORD=${SMTP_PASSWORD}
-      - SMTP_USE_TLS=${SMTP_USE_TLS:-true}
-      - SMTP_USE_SSL=${SMTP_USE_SSL:-false}
-      - EMAIL_FROM=${EMAIL_FROM}
-      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-TenderAI BF}
-      - EMAIL_TO_ADDRESS=${EMAIL_TO_ADDRESS}
-      - EMAIL_REPLY_TO=${EMAIL_REPLY_TO}
-      - GROQ_API_KEY=${GROQ_API_KEY}
-      - GROQ_MODEL=${GROQ_MODEL:-llama-3.3-70b-versatile}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4-turbo-preview}
-      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.1}
-      - LLM_PROVIDER=${LLM_PROVIDER:-groq}
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - ENVIRONMENT=${ENVIRONMENT:-development}
-      - TIMEZONE=${TIMEZONE:-Africa/Ouagadougou}
-      - USE_DATABASE_SOURCES=${USE_DATABASE_SOURCES:-false}
-      - CRON_SCHEDULE=${CRON_SCHEDULE:-0 7 * * *}
-      - ENABLE_SCHEDULER=${ENABLE_SCHEDULER:-true}
-      - OCR_ENABLED=${OCR_ENABLED:-true}
-      - OCR_LANGUAGE=${OCR_LANGUAGE:-fra}
-      - PASSLIB_SKIP_WRAPPING_BUG_CHECK=1
-      # Docling and ML model caches
+      # ML model caches
       - HF_HOME=/app/cache/huggingface
       - TRANSFORMERS_CACHE=/app/cache/huggingface
       - TORCH_HOME=/app/cache/torch
       - EASYOCR_MODULE_PATH=/app/cache/easyocr
+      - PASSLIB_SKIP_WRAPPING_BUG_CHECK=1
     volumes:
       # Configuration
       - ./settings.yaml:/app/settings.yaml:ro
@@ -138,18 +112,13 @@ services:
       context: .
       dockerfile: infra/Dockerfile.ui
     container_name: tenderai-ui
+    env_file: .env
     environment:
+      # Docker internal networking
       - DATABASE_URL=postgresql://${DATABASE_USER:-tenderai}:${DATABASE_PASSWORD:-tenderai_pass}@postgres:5432/${DATABASE_NAME:-tenderai_bf}
       - MINIO_ENDPOINT=minio:9000
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin123}
-      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-tenderai-bf}
       - MINIO_SECURE=false
       - API_URL=http://api:8000
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - ENVIRONMENT=${ENVIRONMENT:-development}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-change-me-in-production}
-      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here-change-in-production}
     volumes:
       # Configuration
       - ./settings.yaml:/app/settings.yaml:ro
@@ -175,19 +144,12 @@ services:
       context: .
       dockerfile: infra/Dockerfile.worker
     container_name: tenderai-worker
+    env_file: .env
     environment:
+      # Docker internal networking
       - DATABASE_URL=postgresql://${DATABASE_USER:-tenderai}:${DATABASE_PASSWORD:-tenderai_pass}@postgres:5432/${DATABASE_NAME:-tenderai_bf}
       - MINIO_ENDPOINT=minio:9000
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin123}
-      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-tenderai-bf}
       - MINIO_SECURE=false
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - ENVIRONMENT=${ENVIRONMENT:-development}
-      - OCR_ENABLED=${OCR_ENABLED:-true}
-      - OCR_LANGUAGE=${OCR_LANGUAGE:-fra}
-      - OCR_TIMEOUT=${OCR_TIMEOUT:-300}
-      - TESSERACT_PATH=${TESSERACT_PATH:-/usr/bin/tesseract}
     volumes:
       # Configuration
       - ./settings.yaml:/app/settings.yaml:ro
