@@ -112,8 +112,9 @@ services:
       - ./alembic:/app/alembic
       - ./tests:/app/tests
     command: ["uvicorn", "tenderai_bf.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
-    ports:
-      - "${API_PORT:-8000}:8000"
+    # Ports exposed only for local development - comment out in production (use Nginx reverse proxy)
+    # ports:
+    #   - "${API_PORT:-8000}:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -155,8 +156,9 @@ services:
       - ./logs:/app/logs
       # Mount source code for hot reload (no rebuild needed after code changes)
       - ./src:/app/src
-    ports:
-      - "${UI_PORT:-7860}:7860"
+    # Ports exposed only for local development - comment out in production (use Nginx reverse proxy)
+    # ports:
+    #   - "${UI_PORT:-7860}:7860"
     depends_on:
       - api
     healthcheck:

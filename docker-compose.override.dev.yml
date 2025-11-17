@@ -1,0 +1,32 @@
+# Development override for docker-compose.yml
+# This file exposes ports for local development access
+# 
+# Usage for local development:
+#   cp docker-compose.override.dev.yml docker-compose.override.yml
+#   docker-compose up -d
+#
+# NOTE: docker-compose.override.yml is in .gitignore and will not be committed
+
+version: '3.8'
+
+services:
+  # PostgreSQL - expose port for local database access
+  postgres:
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+  # MinIO - expose ports for local S3 access and console
+  minio:
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+
+  # API - expose port for local API access
+  api:
+    ports:
+      - "${API_PORT:-8000}:8000"
+
+  # UI - expose port for local UI access
+  ui:
+    ports:
+      - "${UI_PORT:-7860}:7860"
