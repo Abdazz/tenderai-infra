@@ -486,9 +486,10 @@ report:
 # Recipients Configuration
 recipients:
   - name: "Équipe Direction"
-    email: "${TENDERAI_TO_EMAIL}"
-    type: "primary"
-    
+    email: "oconstantin@yulcom-technologies.com"
+    type: "secondary"
+
+        
   # Add additional recipients as needed
   # - name: "Équipe Commercial"
   #   email: "commercial@yourcompany.com"
