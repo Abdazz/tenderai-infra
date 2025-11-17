@@ -122,10 +122,10 @@ if docker-compose ps nginx 2>/dev/null | grep -q "Up"; then
     # Test connection to Nginx Docker
     echo ""
     echo "🔗 Testing connection to Nginx Docker..."
-    if curl -sf http://localhost:18080/health > /dev/null 2>&1; then
-        echo "✅ Nginx Docker is responding on localhost:18080"
+    if curl -sf -k https://localhost:18443/health > /dev/null 2>&1; then
+        echo "✅ Nginx Docker is responding on localhost:18443"
     else
-        echo "⚠️  Warning: Cannot connect to Nginx Docker on localhost:18080"
+        echo "⚠️  Warning: Cannot connect to Nginx Docker on localhost:18443"
         echo "   Make sure the container is fully started"
     fi
 else
@@ -138,7 +138,7 @@ echo "=================================================="
 echo "✅ Apache2 configuration update complete!"
 echo ""
 echo "Next steps:"
-echo "1. Test internal access: curl -I http://localhost:18080/health"
+echo "1. Test internal access: curl -k https://localhost:18443/health"
 echo "2. Test external access: curl -I https://tender-ai.yulcom.net/health"
 echo ""
 echo "View logs:"
