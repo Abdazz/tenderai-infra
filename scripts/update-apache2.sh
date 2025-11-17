@@ -55,9 +55,14 @@ echo ""
 
 # Enable required Apache modules
 echo "📦 Enabling required Apache modules..."
+MODULES_ENABLED=false
 if [ "$APACHE_CMD" = "apache2" ]; then
-    sudo a2enmod proxy proxy_http proxy_wstunnel ssl headers rewrite proxy_connect 2>/dev/null || true
-    echo "✅ Modules enabled"
+    if a2enmod proxy proxy_http proxy_wstunnel ssl headers rewrite proxy_connect 2>/dev/null | grep -q "Enabling"; then
+        MODULES_ENABLED=true
+        echo "✅ New modules enabled - restart required"
+    else
+        echo "✅ All modules already enabled"
+    fi
 else
     echo "ℹ️  For httpd, ensure these modules are enabled in httpd.conf:"
     echo "   - mod_proxy, mod_proxy_http, mod_proxy_wstunnel, mod_proxy_connect"
@@ -93,10 +98,16 @@ else
     exit 1
 fi
 
-# Reload Apache
-echo "🔄 Reloading Apache..."
-sudo systemctl reload $APACHE_SERVICE
-echo "✅ Apache reloaded"
+# Reload or restart Apache
+if [ "$MODULES_ENABLED" = true ]; then
+    echo "🔄 Restarting Apache (modules were enabled)..."
+    sudo systemctl restart $APACHE_SERVICE
+    echo "✅ Apache restarted"
+else
+    echo "🔄 Reloading Apache..."
+    sudo systemctl reload $APACHE_SERVICE
+    echo "✅ Apache reloaded"
+fi
 echo ""
 
 # Check if site is enabled (Apache2 only)
@@ -116,7 +127,7 @@ echo ""
 # Check if Nginx Docker is running
 echo "🐳 Checking Nginx Docker container..."
 cd "$PROJECT_DIR"
-if docker-compose ps nginx 2>/dev/null | grep -q "Up"; then
+if docker-compose ps nginx 2>/dev/null | grep -q -E "(Up|Running)"; then
     echo "✅ Nginx Docker container is running"
     
     # Test connection to Nginx Docker
