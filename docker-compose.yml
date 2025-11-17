@@ -256,6 +256,8 @@ volumes:
     driver: local
   grafana-data:
     driver: local
+  nginx-logs:
+    driver: local
 
 networks:
   tenderai-network:
