@@ -20,14 +20,14 @@ fi
 
 # Check if Apache2 or httpd is installed
 APACHE_CMD=""
-if command -v apache2 &> /dev/null; then
+if command -v apache2 &> /dev/null || [ -x "/usr/sbin/apache2" ] || [ -x "/usr/bin/apache2" ]; then
     APACHE_CMD="apache2"
     APACHE_CTL="apache2ctl"
     APACHE_SERVICE="apache2"
     APACHE_CONF_DIR="/etc/apache2"
     SITES_AVAILABLE="sites-available"
     SITES_ENABLED="sites-enabled"
-elif command -v httpd &> /dev/null; then
+elif command -v httpd &> /dev/null || [ -x "/usr/sbin/httpd" ] || [ -x "/usr/bin/httpd" ]; then
     APACHE_CMD="httpd"
     APACHE_CTL="apachectl"
     APACHE_SERVICE="httpd"
@@ -40,6 +40,13 @@ else
     echo "To install Apache2:"
     echo "  Ubuntu/Debian: sudo apt update && sudo apt install apache2"
     echo "  CentOS/RHEL:   sudo yum install httpd"
+    echo ""
+    echo "Debug info:"
+    echo "  PATH: $PATH"
+    echo "  which apache2: $(which apache2 2>/dev/null || echo 'not found')"
+    echo "  which httpd: $(which httpd 2>/dev/null || echo 'not found')"
+    echo "  ls /usr/sbin/apache2*: $(ls /usr/sbin/apache2* 2>/dev/null || echo 'not found')"
+    echo "  ls /usr/bin/apache2*: $(ls /usr/bin/apache2* 2>/dev/null || echo 'not found')"
     exit 1
 fi
 
