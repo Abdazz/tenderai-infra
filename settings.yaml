@@ -28,7 +28,7 @@ email:
   reply_to: "${TENDERAI_FROM_EMAIL}"
   
   # Email templates (French)
-  subject_template: "🔍 TenderAI BF - Rapport d'appels d'offres {date}"
+  subject_template: "🔍 TenderAI - Rapport d'appels d'offres {date}"
   body_template: |
     Bonjour,
     
@@ -457,7 +457,7 @@ prompts:
 
 # Processing Settings (includes relevance threshold)
 processing:
-  min_relevance_score: 0.0  # Threshold for RAG results (0.0 = all items, 1.0 = only perfect matches)
+  min_relevance_score: ${MIN_RELEVANCE_SCORE:-0.7}  # Threshold for RAG results (0.0 = all items, 1.0 = only perfect matches)
   use_llm_classification: true  # If true, use LLM for classification; if false, use keyword matching
 
 # Report Configuration
