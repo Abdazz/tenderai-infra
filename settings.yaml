@@ -2,11 +2,11 @@
 # Production-grade settings for multi-agent RFP harvester
 
 # Application Settings
-app_name: "TenderAI BF"
-app_version: "1.0.0" 
-environment: "production"  # Options: development, staging, production
-debug: false
-log_level: "INFO"
+app_name: "${APP_NAME}"
+app_version: "${APP_VERSION}"
+environment: "${ENVIRONMENT}"  # Options: development, staging, production
+debug: ${DEBUG}
+log_level: "${LOG_LEVEL}"
 
 # Database Configuration
 database:
