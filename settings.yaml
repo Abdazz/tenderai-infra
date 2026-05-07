@@ -503,9 +503,9 @@ recipients:
     email: "ymorgane@yulcom.ca"
     type: "secondary"
 
-  - name: "PDG"
-    email: "jerome@yulcom.ca"
-    type: "secondary"
+  # - name: "PDG"
+  #   email: "jerome@yulcom.ca"
+  #   type: "secondary"
 
         
 
