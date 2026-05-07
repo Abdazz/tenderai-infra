@@ -124,12 +124,26 @@ sources:
       title_column: 0
       pdf_column: 1
 
+  - name: "Joffres.net - Page de Recherche"
+    list_url: "https://joffres.net/recherche?domaine=Informatique+%26+D%C3%A9veloppement&localisation=&societe=&secteur=&prevision=0%2F1000000000&date_publication=&date_expiration=&statut="
+    item_url_pattern: "https://www.joffres.net/appeloffre/{slug}"
+    parser: "html-listing"  # HTML listing pages with detail links
+    rate_limit: "10/m"
+    enabled: true
+    description: "Plateforme collaborative d'appels d'offres"
+    joffres_settings:
+      item_selector: ".tender-item, .appel-offre, [data-tender]"
+      slug_attribute: "data-slug"
+      title_selector: ".tender-title, h3"
+      entity_selector: ".entity-name, .company"
+      deadline_selector: ".deadline, .date-limite"
+
   - name: "Joffres.net - Appels d'Offres Publics"
     list_url: "https://www.joffres.net/appel-offres-publics"
     item_url_pattern: "https://www.joffres.net/appeloffre/{slug}"
     parser: "html-listing"  # HTML listing pages with detail links
     rate_limit: "10/m"
-    enabled: true
+    enabled: false
     description: "Plateforme collaborative d'appels d'offres publics"
     joffres_settings:
       item_selector: ".tender-item, .appel-offre, [data-tender]"
@@ -143,7 +157,7 @@ sources:
     item_url_pattern: "https://www.joffres.net/appeloffre/{slug}"
     parser: "html-listing"  # HTML listing pages with detail links
     rate_limit: "10/m"
-    enabled: true
+    enabled: false
     description: "Plateforme collaborative d'appels d'offres privés"
     joffres_settings:
       item_selector: ".tender-item, .appel-offre, [data-tender]"
