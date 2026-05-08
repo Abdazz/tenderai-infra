@@ -62,7 +62,10 @@ pipeline:
   
   # Rate limiting
   default_rate_limit: "10/m"  # 10 requests per minute
-  respect_robots_txt: false
+  # Compliance: honour robots.txt by default. Operators can flip this to
+  # false locally for testing, but the default protects us from inadvertently
+  # crawling pages the source explicitly disallows.
+  respect_robots_txt: true
   user_agent: "TenderAI-BF/1.0 (+https://github.com/your-org/tenderai-bf)"
 
 # Scheduler Configuration
@@ -253,13 +256,25 @@ rag:
   enabled: true
   vector_db: "chroma"  # Vector database backend
   embedding_model: "intfloat/multilingual-e5-large-instruct"  # Sentence-transformers model for embeddings
-  chunk_size: 76800  # Size of text chunks for indexing (increased to reduce number of chunks and API calls)
-  chunk_overlap: 2400  # Overlap between chunks for context preservation
+  # chunk_size is in CHARACTERS, not tokens. Rough rule of thumb: 1 token ≈ 4
+  # characters of French/English. Keep this safely below the LLM context window:
+  #   - Groq llama3.1 (8k tokens) → ≤ 4096 chars per chunk leaves room for
+  #     prompt + retrieved-context + response.
+  #   - GPT-4o-mini / Claude (≥128k tokens) → can go higher if needed.
+  # Tune chunk_size and top_k_results together so chunk_size * top_k stays well
+  # under (max_tokens_window − prompt_overhead). 4096 chars × 5 chunks ≈
+  # ~5k tokens of retrieved context, which fits in every supported provider.
+  chunk_size: 4096
+  chunk_overlap: 256  # ~6% overlap; preserves context across chunk boundaries
   top_k_results: 10  # Number of similar chunks to retrieve
-  
+
   # Chroma specific settings
   chroma:
-    persist_directory: "./data/chroma_db"  # Directory to persist vector database
+    # Absolute path is preferred so Chroma persistence survives docker volume
+    # mounts and `docker-compose up` from any working directory. Override with
+    # the TENDERAI_CHROMA_DIR env var; default targets the path mounted by the
+    # `chroma_data` volume in docker-compose.yml.
+    persist_directory: "${TENDERAI_CHROMA_DIR:-/app/data/chroma_db}"
     collection_prefix: "tenders"  # Prefix for collection names
     host: null  # Leave null for embedded mode, or set hostname for server mode
     port: null  # Leave null for embedded mode
@@ -567,14 +582,16 @@ monitoring:
 
 # Security Settings
 security:
-  # JWT Authentication
-  jwt_secret_key: "${TENDERAI_JWT_SECRET:-change-this-secret-key-in-production-use-openssl-rand-hex-32}"
+  # JWT Authentication — TENDERAI_JWT_SECRET must be set in the environment.
+  # No fallback is provided on purpose: missing/weak values are rejected at startup.
+  jwt_secret_key: "${TENDERAI_JWT_SECRET}"
   jwt_algorithm: "HS256"
   jwt_access_token_expire_minutes: 1440  # 24 hours
-  
-  # Admin credentials (for initial setup - move to database later)
+
+  # Admin credentials (for initial setup - move to database later).
+  # TENDERAI_ADMIN_PASSWORD must be set in the environment; no default fallback.
   admin_username: "${TENDERAI_ADMIN_USERNAME:-admin}"
-  admin_password: "${TENDERAI_ADMIN_PASSWORD:-admin123}"  # CHANGE IN PRODUCTION!
+  admin_password: "${TENDERAI_ADMIN_PASSWORD}"
   
   # Security limits
   max_file_size_mb: 100

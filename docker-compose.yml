@@ -81,6 +81,9 @@ services:
       - ./settings.yaml:/app/settings.yaml:ro
       - ./logs:/app/logs
       - api-cache:/app/cache
+      # Persist Chroma vector DB across container restarts (path matches
+      # TENDERAI_CHROMA_DIR / settings.yaml rag.chroma.persist_directory).
+      - chroma-data:/app/data/chroma_db
       # Mount source code for hot reload (no rebuild needed after code changes)
       - ./src:/app/src
       - ./alembic:/app/alembic
@@ -156,6 +159,8 @@ services:
       - ./logs:/app/logs
       - worker-cache:/app/cache
       - worker-temp:/tmp/ocr
+      # Share Chroma vector DB with the api service.
+      - chroma-data:/app/data/chroma_db
       # Mount source code for hot reload (no rebuild needed after code changes)
       - ./src:/app/src
     depends_on:
@@ -213,6 +218,8 @@ volumes:
   worker-cache:
     driver: local
   worker-temp:
+    driver: local
+  chroma-data:
     driver: local
   prometheus-data:
     driver: local
