@@ -193,6 +193,8 @@ sources:
         - '"appel d''offres" "Burkina Faso" réseau serveur logiciel'
 
 # Classification Settings
+# Scope: YULCOM Technologies targets IT services, IT hardware, and IT consulting only.
+# Civil engineering, construction, BTP, and non-IT domains are explicitly excluded.
 classification:
   relevant_keywords:
     it_services:
@@ -202,8 +204,10 @@ classification:
       - "application"
       - "système d'information"
       - "base de données"
-      - "réseau"
+      - "réseau informatique"
+      - "réseau local"
       - "cybersécurité"
+      - "sécurité informatique"
       - "cloud"
       - "numérique"
       - "digital"
@@ -211,68 +215,66 @@ classification:
       - "plateforme"
       - "e-gouvernement"
       - "gestion électronique"
-      
-    engineering:
-      - "ingénierie"
-      - "génie civil"
-      - "infrastructure"
-      - "construction"
-      - "BTP"
-      - "routes"
-      - "bâtiment"
-      - "électricité"
-      - "télécommunications"
-      - "énergie"
-      - "hydraulique"
-      - "assainissement"
-      
-    consulting:
-      - "conseil"
-      - "consultance"
-      - "étude"
-      - "expertise"
-      - "assistance technique"
-      - "formation"
-      - "audit"
-      - "évaluation"
-      
+      - "télécommunication"
+      - "fibre optique"
+      - "wifi"
+      - "internet"
+      - "système de gestion"
+      - "ERP"
+      - "CRM"
+      - "SIG"
+      - "GIS"
+      - "vidéoconférence"
+      - "intelligence artificielle"
+      - "data center"
+      - "hébergement"
+      - "infogérance"
+
     it_hardware:
       - "équipement informatique"
       - "matériel informatique"
       - "ordinateur"
+      - "ordinateur portable"
       - "serveur"
       - "poste de travail"
-      - "matériel de bureau"
       - "imprimante"
       - "scanner"
       - "photocopieur"
       - "disque dur"
+      - "disque SSD"
       - "mémoire RAM"
-      - "processeur"
-      - "carte graphique"
-      - "carte mère"
-      - "alimentation électrique"
-      - "onduleur"
-      - "batterie"
-      - "câbles"
-      - "connecteurs"
       - "accessoires informatiques"
+      - "consommables informatiques"
       - "écran"
       - "moniteur"
       - "clavier"
       - "souris"
-      - "hub USB"
-      - "adaptateur"
       - "routeur"
       - "switch réseau"
+      - "switch"
       - "modem"
       - "point d'accès wifi"
-      - "disque SSD"
-      - "lecteur optique"
+      - "onduleur"
+      - "groupe électrogène informatique"
       - "webcam"
-      - "microphone"
-      - "enceinte"
-      - "casque audio"
+      - "péri-informatique"
+      - "liaison informatique"
+
+    it_consulting:
+      - "étude informatique"
+      - "audit informatique"
+      - "audit de sécurité"
+      - "assistance technique informatique"
+      - "consultant informatique"
+      - "consultant IT"
+      - "expertise informatique"
+      - "schéma directeur informatique"
+      - "formation informatique"
+      - "mise en place d'un système"
+      - "mise en œuvre d'un système"
+      - "déploiement"
+      - "intégration de système"
+      - "recrutement d'un consultant"
 
 # RAG (Retrieval-Augmented Generation) Settings
 rag:
@@ -318,9 +320,14 @@ rag:
 prompts:
   extraction:
     system: |
-      Vous êtes un expert des marchés publics chargé d’extraire, à partir d’un extrait de document (chunk), les informations relatives :
-      - aux NOUVEAUX appels d’offres ;
-      - aux AVIS liés à des appels d’offres existants (communiqués, rectificatifs, prorogations, annulations, etc.).
+      Vous êtes un expert des marchés publics IT au Burkina Faso. Votre mission est d’extraire, à partir d’un extrait de document, les appels d’offres et avis relevant des domaines suivants UNIQUEMENT :
+      - Services IT (développement logiciel, systèmes d’information, cybersécurité, cloud, réseaux, télécommunications)
+      - Matériel informatique (ordinateurs, serveurs, équipements réseau, imprimantes, onduleurs)
+      - Conseil et ingénierie IT (études, audits, assistance technique, formation, déploiement de systèmes)
+
+      Vous extrayez :
+      - les NOUVEAUX appels d’offres dans ces domaines ;
+      - les AVIS liés à des appels d’offres existants (rectificatifs, prorogations, annulations, communiqués).
 
       Le texte fourni peut être incomplet : vous ne voyez qu’une partie du document.
       Par conséquent :
