@@ -340,7 +340,9 @@ prompts:
       Vous devez IGNORER absolument :
       - les avis d’attribution et résultats de marchés (résultats provisoires, résultats définitifs, adjudicataire, attributaire) ;
       - les rectificatifs portant sur des résultats provisoires ou définitifs (ex. "rectificatif des résultats provisoires publiés...") ;
-      - tout document mentionnant un recours préalable sur des résultats d’attribution.
+      - tout document mentionnant un recours préalable sur des résultats d’attribution ;
+      - les procès-verbaux (PV) de dépouillement ou d’ouverture des plis : tout texte mentionnant "nombre de plis reçus", "plis reçus", "candidats retenus", "soumissionnaires retenus", "nombre d’offres reçues", "séance de dépouillement" — ces éléments indiquent que la soumission est déjà clôturée et que les offres ont été ouvertes/évaluées ;
+      - les avis d’appel à la concurrence déclarés infructueux.
 
       Pour chaque élément (appel d’offres ou avis) que vous extrayez, vous devez remplir les champs du schéma de sortie comme suit :
 
@@ -514,6 +516,8 @@ prompts:
 processing:
   min_relevance_score: ${MIN_RELEVANCE_SCORE:-0.7}  # Threshold for RAG results (0.0 = all items, 1.0 = only perfect matches)
   use_llm_classification: true  # If true, use LLM for classification; if false, use keyword matching
+  deduplication_threshold: 0.75  # Lowered from 0.85: cross-source duplicates have different text formatting
+  deduplication_method: "hash_similarity"
 
 # Report Configuration
 report:
