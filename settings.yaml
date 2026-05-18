@@ -169,6 +169,29 @@ sources:
       entity_selector: ".entity-name, .company"
       deadline_selector: ".deadline, .date-limite"
 
+  - name: "UNGM - UN Global Marketplace (Burkina Faso)"
+    list_url: "https://www.ungm.org/Public/Notice/Search"
+    parser: "ungm"
+    rate_limit: "5/m"
+    enabled: true
+    description: "Avis de marchés ONU (PNUD, UNICEF, OMS, etc.) filtrés par pays Burkina Faso"
+    ungm_settings:
+      country_ids: [2324]   # 2324 = Burkina Faso
+      page_size: 50
+
+  - name: "Google Search - AO Burkina IT"
+    list_url: "https://www.googleapis.com/customsearch/v1"
+    parser: "google_search"
+    rate_limit: "10/m"
+    enabled: false
+    description: "Recherche web Google pour appels d'offres IT au Burkina Faso"
+    google_search_settings:
+      queries:
+        - '"appel d''offres" "Burkina Faso" informatique -résultats -attribution'
+        - '"demande de prix" "Burkina Faso" informatique -résultats'
+        - '"appel d''offres" "Burkina Faso" numérique cybersécurité'
+        - '"appel d''offres" "Burkina Faso" réseau serveur logiciel'
+
 # Classification Settings
 classification:
   relevant_keywords:
@@ -314,7 +337,10 @@ prompts:
       - "annulation"     : avis d’annulation d’un appel d’offres ;
       - "autre"          : tout autre avis lié aux marchés publics ne rentrant pas clairement dans les catégories précédentes.
 
-      Vous devez IGNORER absolument les avis d’attribution / résultats,
+      Vous devez IGNORER absolument :
+      - les avis d’attribution et résultats de marchés (résultats provisoires, résultats définitifs, adjudicataire, attributaire) ;
+      - les rectificatifs portant sur des résultats provisoires ou définitifs (ex. "rectificatif des résultats provisoires publiés...") ;
+      - tout document mentionnant un recours préalable sur des résultats d’attribution.
 
       Pour chaque élément (appel d’offres ou avis) que vous extrayez, vous devez remplir les champs du schéma de sortie comme suit :
 
@@ -514,9 +540,9 @@ report:
 
 # Recipients Configuration
 recipients:
-  - name: "DGA"
-    email: "ymorgane@yulcom.ca"
-    type: "secondary"
+  # - name: "DGA"
+  #   email: "ymorgane@yulcom.ca"
+  #   type: "secondary"
 
   # - name: "PDG"
   #   email: "jerome@yulcom.ca"
