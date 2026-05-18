@@ -540,6 +540,11 @@ report:
 
 # Recipients Configuration
 recipients:
+  - name: "Diane"
+    email: "tdiane@yulcom.ca"
+    type: "secondary"
+
+
   # - name: "DGA"
   #   email: "ymorgane@yulcom.ca"
   #   type: "secondary"
