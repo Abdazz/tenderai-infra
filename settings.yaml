@@ -72,7 +72,7 @@ pipeline:
 scheduler:
   enabled: true
   timezone: "Africa/Ouagadougou"
-  cron_schedule: "30 7 * * 1-5"  # 7:30 AM, Monday to Friday
+  cron_schedule: "00 * * * 1-5"  # 7:30 AM, Monday to Friday
   max_concurrent_runs: 1
   catch_up: false
 
