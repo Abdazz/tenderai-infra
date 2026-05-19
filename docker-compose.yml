@@ -117,6 +117,7 @@ services:
     container_name: tenderai-frontend
     env_file: .env
     environment:
+      - API_URL=http://api:8000
       - NEXT_PUBLIC_API_URL=http://api:8000
       - NEXT_PUBLIC_FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
       - JWT_SECRET=${TENDERAI_JWT_SECRET}
