@@ -151,7 +151,7 @@ pull_images() {
     cd "$DEPLOY_DIR"
     
     # Try to pull images, but don't fail if not available
-    if docker-compose pull api ui worker 2>/dev/null; then
+    if docker-compose pull api frontend worker 2>/dev/null; then
         log_info "Images pulled successfully ✓"
     else
         log_warn "Could not pull images from registry. Will build locally."
@@ -195,7 +195,7 @@ deploy_services() {
     cd "$DEPLOY_DIR"
     
     # Start all services (or restart if already running)
-    docker-compose up -d api ui worker
+    docker-compose up -d api frontend worker
     
     log_info "Services deployed ✓"
 }
@@ -218,7 +218,7 @@ health_check() {
     fi
     
     # Check UI health
-    local ui_url="http://localhost:${UI_PORT:-7860}"
+    local ui_url="http://localhost:${FRONTEND_PORT:-3000}"
     if curl -f "$ui_url" &> /dev/null; then
         log_info "UI health check: ✓"
     else
@@ -248,7 +248,7 @@ show_status() {
     log_info "Access points:"
     log_info "  - API: http://localhost:${API_PORT:-8000}"
     log_info "  - API Docs: http://localhost:${API_PORT:-8000}/docs"
-    log_info "  - UI: http://localhost:${UI_PORT:-7860}"
+    log_info "  - Frontend: http://localhost:${FRONTEND_PORT:-3000}"
     log_info "  - MinIO Console: http://localhost:${MINIO_CONSOLE_PORT:-9001}"
     echo ""
 }
@@ -438,7 +438,7 @@ case "$command" in
         echo "  $0 develop deploy           # Deploy from develop branch"
         echo "  $0 main rollback            # Rollback to previous version"
         echo "  $0 main logs api            # View API logs"
-        echo "  $0 main logs ui             # View UI logs"
+        echo "  $0 main logs frontend       # View frontend logs"
         echo "  $0 main backup              # Create database backup"
         echo "  $0 main restart api         # Restart API service"
         echo ""
