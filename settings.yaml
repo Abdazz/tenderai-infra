@@ -551,18 +551,18 @@ report:
 
 # Recipients Configuration
 recipients:
-  # - name: "Diane"
-  #   email: "tdiane@yulcom.ca"
-  #   type: "secondary"
+  - name: "PDG"
+    email: "jerome@yulcom.ca"
+    type: "secondary"
 
+  - name: "DGA"
+    email: "ymorgane@yulcom.ca"
+    type: "secondary"
 
-  # - name: "DGA"
-  #   email: "ymorgane@yulcom.ca"
-  #   type: "secondary"
+  - name: "Diane"
+    email: "tdiane@yulcom.ca"
+    type: "secondary"
 
-  # - name: "PDG"
-  #   email: "jerome@yulcom.ca"
-  #   type: "secondary"
 
         
 
