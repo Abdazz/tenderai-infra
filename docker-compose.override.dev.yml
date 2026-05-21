@@ -26,7 +26,7 @@ services:
     ports:
       - "${API_PORT:-8000}:8000"
 
-  # UI - expose port for local UI access
-  ui:
+  # Frontend - expose port for local access
+  frontend:
     ports:
-      - "${UI_PORT:-7860}:7860"
+      - "${FRONTEND_PORT:-3000}:3000"
