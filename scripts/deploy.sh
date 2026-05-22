@@ -113,13 +113,13 @@ check_env_file() {
 
 setup_production_override() {
     log_step "Setting up production configuration"
-    
-    if [ -f "$DEPLOY_DIR/docker-compose.override.prod.yml" ]; then
-        log_info "Copying production override file..."
-        cp "$DEPLOY_DIR/docker-compose.override.prod.yml" "$DEPLOY_DIR/docker-compose.override.yml"
-        log_info "Production override activated ✓"
+
+    if [ -f "$DEPLOY_DIR/docker-compose.server.yml" ]; then
+        log_info "Copying production server file..."
+        cp "$DEPLOY_DIR/docker-compose.server.yml" "$DEPLOY_DIR/docker-compose.override.yml"
+        log_info "Production server configuration activated ✓"
     else
-        log_warn "docker-compose.override.prod.yml not found, will use default configuration"
+        log_warn "docker-compose.server.yml not found, will use default configuration"
     fi
 }
 
