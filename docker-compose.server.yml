@@ -1,0 +1,76 @@
+# docker-compose.server.yml
+#
+# Override unifié pour production et staging sur le même hôte.
+# Utiliser avec : docker compose --env-file .env.prod  (ou .env.staging)
+#
+# Variables requises dans le fichier .env.* :
+#   ENV_NAME             — préfixe des containers  (prod / staging)
+#   COMPOSE_PROJECT_NAME — namespace Docker         (tenderai-prod / tenderai-staging)
+#   DOMAIN               — domaine public           (tender-ai.yulcom.net / staging.tender-ai.yulcom.net)
+#   NGINX_HTTP_PORT      — port HTTP côté hôte      (18080 / 19080)
+#   NGINX_HTTPS_PORT     — port HTTPS côté hôte     (18443 / 19443)
+#   IMAGE_TAG            — tag d'image Docker        (latest / staging)
+#   ENVIRONMENT          — valeur de ENVIRONMENT     (production / staging)
+
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: ${ENV_NAME}_nginx
+    ports:
+      - "127.0.0.1:${NGINX_HTTP_PORT}:80"
+      - "127.0.0.1:${NGINX_HTTPS_PORT}:443"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/nginx/templates:/etc/nginx/templates:ro
+      - /etc/letsencrypt/live/${DOMAIN}/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
+      - /etc/letsencrypt/live/${DOMAIN}/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - nginx-logs:/var/log/nginx
+    environment:
+      - DOMAIN=${DOMAIN}
+      - NGINX_ENVSUBST_TEMPLATE_VARS=DOMAIN
+    depends_on:
+      - api
+      - frontend
+    restart: unless-stopped
+    networks:
+      - tenderai-network
+
+  api:
+    image: ghcr.io/abdazz/tenderai-bf-api:${IMAGE_TAG}
+    container_name: ${ENV_NAME}_api
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT}
+    volumes:
+      - ./settings.yaml:/app/settings.yaml:ro
+      - ./logs:/app/logs
+      - api-cache:/app/cache
+      - ./alembic:/app/alembic
+    command: ["uvicorn", "tenderai_bf.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  frontend:
+    image: ghcr.io/abdazz/tenderai-bf-frontend:${IMAGE_TAG}
+    container_name: ${ENV_NAME}_frontend
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT}
+
+  worker:
+    image: ghcr.io/abdazz/tenderai-bf-worker:${IMAGE_TAG}
+    container_name: ${ENV_NAME}_worker
+    command: ["python", "-m", "tenderai_bf.cli", "run-scheduler"]
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT}
+    volumes:
+      - ./settings.yaml:/app/settings.yaml:ro
+      - ./logs:/app/logs
+      - worker-cache:/app/cache
+      - worker-temp:/tmp/ocr
+      - chroma-data:/app/data/chroma_db
+
+  postgres:
+    container_name: ${ENV_NAME}_postgres
+
+  minio:
+    container_name: ${ENV_NAME}_minio
