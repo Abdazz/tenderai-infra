@@ -559,8 +559,12 @@ recipients:
     email: "ymorgane@yulcom.ca"
     type: "secondary"
 
-  - name: "Diane"
+  - name: "Diane Tapsoaba"
     email: "tdiane@yulcom.ca"
+    type: "secondary"
+
+  - name: "Constantin Ouedraogo"
+    email: "oconstantin@yulcom-technologies.com"
     type: "secondary"
 
 
