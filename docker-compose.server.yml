@@ -74,3 +74,6 @@ services:
 
   minio:
     container_name: ${ENV_NAME}_minio
+
+  createbuckets:
+    container_name: ${ENV_NAME}_createbuckets
