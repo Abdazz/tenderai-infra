@@ -72,7 +72,7 @@ pipeline:
 scheduler:
   enabled: true
   timezone: "Africa/Ouagadougou"
-  cron_schedule: "0 7 * * mon-fri"  # 7:00 AM, Monday to Friday
+  cron_schedule: "0 7 * * 0-4"  # 7:00 AM, Monday(0) to Friday(4) — APScheduler uses Python weekday() 0=Mon
   max_concurrent_runs: 1
   catch_up: false
 
