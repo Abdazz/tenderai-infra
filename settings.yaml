@@ -179,6 +179,39 @@ sources:
       country_ids: [2324]   # 2324 = Burkina Faso
       page_size: 50
 
+  - name: "UEMOA - Appels d'offres"
+    list_url: "https://www.uemoa.int/appel-d-offre"
+    parser: "html-tender"
+    rate_limit: "5/m"
+    enabled: true
+    description: "Appels d'offres régionaux UEMOA (zone Afrique de l'Ouest)"
+    patterns:
+      ssl_verify: false
+      card_selector: "div.swiper-slide div.news-box"
+      title_selector: "div.new-txt p"
+      deadline_selector: "time"
+      deadline_attribute: "datetime"
+      pdf_selector: "a[href*='opportunite_affaire']"
+      entity: "UEMOA"
+      location: "Zone UEMOA"
+      max_pages: 1
+
+  - name: "Enabel - Marchés publics Burkina Faso"
+    list_url: "https://www.enabel.be/fr/marches-publics/?in_country=1726&is_status=0"
+    parser: "html-tender"
+    rate_limit: "5/m"
+    enabled: true
+    description: "Marchés publics Enabel (coopération belge) filtrés Burkina Faso ouverts"
+    patterns:
+      card_selector: "div.card--news.card--tenders"
+      title_selector: "p.h5 span"
+      deadline_selector: "p"
+      deadline_text_prefix: "Date de clôture"
+      entity: "Enabel"
+      location: "Burkina Faso"
+      max_pages: 3
+      pagination_url: "https://www.enabel.be/fr/marches-publics/page/{page}/?in_country=1726&is_status=0"
+
   - name: "Google Search - AO Burkina IT"
     list_url: "https://www.googleapis.com/customsearch/v1"
     parser: "google_search"
