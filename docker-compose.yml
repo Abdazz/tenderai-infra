@@ -67,9 +67,7 @@ services:
       context: .
       dockerfile: infra/Dockerfile.api
     container_name: tenderai-api
-    env_file:
-      - path: .env
-        required: false
+    env_file: .env
     environment:
       # Docker internal networking
       - DATABASE_URL=postgresql://${DATABASE_USER:-tenderai}:${DATABASE_PASSWORD:-tenderai_pass}@postgres:5432/${DATABASE_NAME:-tenderai_bf}
@@ -120,9 +118,7 @@ services:
       context: .
       dockerfile: infra/Dockerfile.frontend
     container_name: tenderai-frontend
-    env_file:
-      - path: .env
-        required: false
+    env_file: .env
     environment:
       - API_URL=http://api:8000
       - NEXT_PUBLIC_API_URL=http://api:8000
@@ -144,9 +140,7 @@ services:
       context: .
       dockerfile: infra/Dockerfile.worker
     container_name: tenderai-worker
-    env_file:
-      - path: .env
-        required: false
+    env_file: .env
     environment:
       # Docker internal networking
       - DATABASE_URL=postgresql://${DATABASE_USER:-tenderai}:${DATABASE_PASSWORD:-tenderai_pass}@postgres:5432/${DATABASE_NAME:-tenderai_bf}
