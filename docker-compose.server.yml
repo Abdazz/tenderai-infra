@@ -11,6 +11,9 @@
 #   NGINX_HTTPS_PORT     — port HTTPS côté hôte     (18443 / 19443)
 #   IMAGE_TAG            — tag d'image Docker        (latest / staging)
 #   ENVIRONMENT          — valeur de ENVIRONMENT     (production / staging)
+#
+# Ce fichier surcharge env_file pour que les services lisent .env.prod ou
+# .env.staging directement — pas besoin de symlink .env sur le serveur.
 
 version: '3.8'
 
@@ -41,6 +44,7 @@ services:
   api:
     image: ghcr.io/abdazz/tenderai-bf-api:${IMAGE_TAG}
     container_name: ${ENV_NAME}_api
+    env_file: .env.${ENV_NAME}
     environment:
       - ENVIRONMENT=${ENVIRONMENT}
     volumes:
@@ -53,12 +57,14 @@ services:
   frontend:
     image: ghcr.io/abdazz/tenderai-bf-frontend:${IMAGE_TAG}
     container_name: ${ENV_NAME}_frontend
+    env_file: .env.${ENV_NAME}
     environment:
       - ENVIRONMENT=${ENVIRONMENT}
 
   worker:
     image: ghcr.io/abdazz/tenderai-bf-worker:${IMAGE_TAG}
     container_name: ${ENV_NAME}_worker
+    env_file: .env.${ENV_NAME}
     command: ["python", "-m", "tenderai_bf.cli", "run-scheduler"]
     environment:
       - ENVIRONMENT=${ENVIRONMENT}
