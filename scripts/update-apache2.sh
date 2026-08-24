@@ -83,7 +83,7 @@ fi
 
 # Copy new configuration
 echo "📝 Copying new Apache configuration..."
-sudo cp "$PROJECT_DIR/infra/apache2/tender-ai.yulcom.net.conf" "$CONF_FILE"
+sudo cp "$PROJECT_DIR/apache2/tender-ai.yulcom.net.conf" "$CONF_FILE"
 echo "✅ Configuration copied to: $CONF_FILE"
 echo ""
 
