@@ -1,0 +1,137 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        type: choice
+        options:
+          - production
+          - staging
+      image_tag:
+        description: 'Image tag to deploy'
+        required: false
+        type: string
+        default: 'latest'
+
+jobs:
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    if: inputs.environment == 'production'
+    environment:
+      name: production
+      url: https://tender-ai.yulcom.net
+    steps:
+      - uses: actions/checkout@v4
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Add server to known hosts
+        env:
+          HOST: ${{ secrets.PRODUCTION_HOST }}
+          PORT: ${{ secrets.PRODUCTION_SSH_PORT || 22 }}
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H -p ${PORT} ${HOST} >> ~/.ssh/known_hosts
+      - name: Deploy
+        env:
+          HOST: ${{ secrets.PRODUCTION_HOST }}
+          USER: ${{ secrets.PRODUCTION_USER }}
+          PORT: ${{ secrets.PRODUCTION_SSH_PORT || 22 }}
+          DEPLOY_PATH: ${{ secrets.PRODUCTION_DEPLOY_PATH || '/opt/tenderai-infra' }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          TENDERAI_JWT_SECRET: ${{ secrets.TENDERAI_JWT_SECRET }}
+          TENDERAI_ADMIN_PASSWORD: ${{ secrets.TENDERAI_ADMIN_PASSWORD }}
+        run: |
+          ssh -p ${PORT} ${USER}@${HOST} "bash -s" << ENDSSH
+            set -e
+            cd ${DEPLOY_PATH}
+            git checkout main
+            git pull origin main
+            sed -i "s|^TENDERAI_JWT_SECRET=.*|TENDERAI_JWT_SECRET=${TENDERAI_JWT_SECRET}|" .env.prod
+            sed -i "s|^TENDERAI_ADMIN_PASSWORD=.*|TENDERAI_ADMIN_PASSWORD=${TENDERAI_ADMIN_PASSWORD}|" .env.prod
+            sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=${IMAGE_TAG}|" .env.prod
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            set -a; source .env.prod; set +a
+            docker compose --env-file .env.prod down --remove-orphans || true
+            mkdir -p logs/nodes 2>/dev/null || true
+            docker compose --env-file .env.prod pull api frontend worker || true
+            docker compose --env-file .env.prod up -d postgres minio createbuckets
+            until docker compose --env-file .env.prod exec -T postgres pg_isready -U \${POSTGRES_USER:-tenderai} -d \${POSTGRES_DB:-tenderai_bf} </dev/null; do sleep 3; done
+            for i in \$(seq 1 20); do
+              docker compose --env-file .env.prod exec -T minio curl -sf http://localhost:9000/minio/health/live </dev/null > /dev/null 2>&1 && break
+              [ \$i -eq 20 ] && exit 1
+              sleep 5
+            done
+            docker compose --env-file .env.prod run --no-deps --rm api alembic upgrade head </dev/null
+            docker compose --env-file .env.prod run --no-deps --rm api tenderai create-admin </dev/null || true
+            docker compose --env-file .env.prod run --no-deps --rm api tenderai seed-sources </dev/null || true
+            docker compose --env-file .env.prod up -d api frontend worker nginx
+            for i in \$(seq 1 18); do
+              docker compose --env-file .env.prod exec -T api curl -sf http://localhost:8000/health </dev/null > /dev/null 2>&1 && break
+              [ \$i -eq 18 ] && exit 1
+              sleep 10
+            done
+            docker image prune -f
+          ENDSSH
+      - name: Health check
+        run: |
+          sleep 10
+          curl -f https://tender-ai.yulcom.net/health
+
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    if: inputs.environment == 'staging'
+    environment:
+      name: staging
+      url: https://stagingtenderai.yulcom.net
+    steps:
+      - uses: actions/checkout@v4
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Add server to known hosts
+        env:
+          HOST: ${{ secrets.PRODUCTION_HOST }}
+          PORT: ${{ secrets.PRODUCTION_SSH_PORT || 22 }}
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H -p ${PORT} ${HOST} >> ~/.ssh/known_hosts
+      - name: Deploy
+        env:
+          HOST: ${{ secrets.PRODUCTION_HOST }}
+          USER: ${{ secrets.PRODUCTION_USER }}
+          PORT: ${{ secrets.PRODUCTION_SSH_PORT || 22 }}
+          DEPLOY_PATH: ${{ secrets.STAGING_DEPLOY_PATH || '/opt/tenderai-infra-staging' }}
+          IMAGE_TAG: ${{ inputs.image_tag }}
+          TENDERAI_JWT_SECRET: ${{ secrets.TENDERAI_JWT_SECRET }}
+          TENDERAI_ADMIN_PASSWORD: ${{ secrets.TENDERAI_ADMIN_PASSWORD }}
+        run: |
+          ssh -p ${PORT} ${USER}@${HOST} "bash -s" << ENDSSH
+            set -e
+            cd ${DEPLOY_PATH}
+            git config pull.ff only
+            git pull origin main
+            sed -i "s|^TENDERAI_JWT_SECRET=.*|TENDERAI_JWT_SECRET=${TENDERAI_JWT_SECRET}|" .env.staging
+            sed -i "s|^TENDERAI_ADMIN_PASSWORD=.*|TENDERAI_ADMIN_PASSWORD=${TENDERAI_ADMIN_PASSWORD}|" .env.staging
+            sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=${IMAGE_TAG}|" .env.staging
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            set -a; source .env.staging; set +a
+            docker compose --env-file .env.staging down --remove-orphans || true
+            docker compose --env-file .env.staging pull api frontend worker || true
+            docker compose --env-file .env.staging up -d postgres minio createbuckets
+            until docker compose --env-file .env.staging exec -T postgres pg_isready -U \${POSTGRES_USER:-tenderai} -d \${POSTGRES_DB:-tenderai_bf} </dev/null; do sleep 3; done
+            docker compose --env-file .env.staging run --no-deps --rm api alembic upgrade head </dev/null
+            docker compose --env-file .env.staging run --no-deps --rm api tenderai create-admin </dev/null || true
+            docker compose --env-file .env.staging run --no-deps --rm api tenderai seed-sources </dev/null || true
+            docker compose --env-file .env.staging up -d api frontend worker nginx
+            docker image prune -f
+          ENDSSH
+      - name: Health check
+        run: |
+          sleep 30
+          curl -f https://stagingtenderai.yulcom.net/health

@@ -51,7 +51,6 @@ services:
       - ./settings.yaml:/app/settings.yaml:ro
       - ./logs:/app/logs
       - api-cache:/app/cache
-      - ./alembic:/app/alembic
     command: ["uvicorn", "tenderai_bf.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
   frontend:

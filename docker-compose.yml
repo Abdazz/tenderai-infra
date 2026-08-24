@@ -9,10 +9,7 @@ services:
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./infra/postgres-init:/docker-entrypoint-initdb.d
-    # Ports exposed only for local development - comment out in production
-    # ports:
-    #   - "${POSTGRES_PORT:-5432}:5432"
+      - ./postgres-init:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-tenderai} -d ${DATABASE_NAME:-tenderai_bf}"]
       interval: 10s
@@ -30,10 +27,6 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin123}
     volumes:
       - minio-data:/data
-    # Ports exposed only for local development - comment out in production
-    # ports:
-    #   - "${MINIO_PORT:-9000}:9000"
-    #   - "${MINIO_CONSOLE_PORT:-9001}:9001"
     command: server /data --console-address ":9001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
@@ -64,37 +57,20 @@ services:
 
   api:
     build:
-      context: .
-      dockerfile: infra/Dockerfile.api
+      context: ../tenderai-backend
+      dockerfile: Dockerfile.api
     container_name: tenderai-api
     env_file: .env
     environment:
-      # Docker internal networking
       - DATABASE_URL=postgresql://${DATABASE_USER:-tenderai}:${DATABASE_PASSWORD:-tenderai_pass}@postgres:5432/${DATABASE_NAME:-tenderai_bf}
       - MINIO_ENDPOINT=minio:9000
       - MINIO_SECURE=false
-      # ML model caches
-      - HF_HOME=/app/cache/huggingface
-      - TRANSFORMERS_CACHE=/app/cache/huggingface
-      - TORCH_HOME=/app/cache/torch
-      - EASYOCR_MODULE_PATH=/app/cache/easyocr
       - PASSLIB_SKIP_WRAPPING_BUG_CHECK=1
     volumes:
-      # Configuration
       - ./settings.yaml:/app/settings.yaml:ro
       - ./logs:/app/logs
       - api-cache:/app/cache
-      # Persist Chroma vector DB across container restarts (path matches
-      # TENDERAI_CHROMA_DIR / settings.yaml rag.chroma.persist_directory).
       - chroma-data:/app/data/chroma_db
-      # Mount source code for hot reload (no rebuild needed after code changes)
-      - ./src:/app/src
-      - ./alembic:/app/alembic
-      - ./tests:/app/tests
-    command: ["uvicorn", "tenderai_bf.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
-    # Ports exposed only for local development - comment out in production (use Nginx reverse proxy)
-    # ports:
-    #   - "${API_PORT:-8000}:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -107,16 +83,14 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     networks:
       - tenderai-network
 
   frontend:
     build:
-      context: .
-      dockerfile: infra/Dockerfile.frontend
+      context: ../tenderai-frontend
+      dockerfile: Dockerfile.frontend
     container_name: tenderai-frontend
     env_file: .env
     environment:
@@ -137,70 +111,27 @@ services:
 
   worker:
     build:
-      context: .
-      dockerfile: infra/Dockerfile.worker
+      context: ../tenderai-backend
+      dockerfile: Dockerfile.worker
     container_name: tenderai-worker
     env_file: .env
     environment:
-      # Docker internal networking
       - DATABASE_URL=postgresql://${DATABASE_USER:-tenderai}:${DATABASE_PASSWORD:-tenderai_pass}@postgres:5432/${DATABASE_NAME:-tenderai_bf}
       - MINIO_ENDPOINT=minio:9000
       - MINIO_SECURE=false
       - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
     volumes:
-      # Configuration
       - ./settings.yaml:/app/settings.yaml:ro
       - ./logs:/app/logs
       - worker-cache:/app/cache
       - worker-temp:/tmp/ocr
-      # Share Chroma vector DB with the api service.
       - chroma-data:/app/data/chroma_db
-      # Mount source code for hot reload (no rebuild needed after code changes)
-      - ./src:/app/src
     depends_on:
       - postgres
       - minio
     restart: unless-stopped
     networks:
       - tenderai-network
-
-  # Optional: Monitoring services
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: tenderai-prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./infra/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - prometheus-data:/prometheus
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
-      - '--web.enable-lifecycle'
-    restart: unless-stopped
-    networks:
-      - tenderai-network
-    profiles:
-      - monitoring
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: tenderai-grafana
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ./infra/grafana/dashboards:/etc/grafana/provisioning/dashboards
-      - ./infra/grafana/datasources:/etc/grafana/provisioning/datasources
-    restart: unless-stopped
-    networks:
-      - tenderai-network
-    profiles:
-      - monitoring
 
 volumes:
   postgres-data:
@@ -214,12 +145,6 @@ volumes:
   worker-temp:
     driver: local
   chroma-data:
-    driver: local
-  prometheus-data:
-    driver: local
-  grafana-data:
-    driver: local
-  nginx-logs:
     driver: local
 
 networks:
