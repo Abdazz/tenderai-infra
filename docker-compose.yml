@@ -146,6 +146,8 @@ volumes:
     driver: local
   chroma-data:
     driver: local
+  nginx-logs:
+    driver: local
 
 networks:
   tenderai-network:
