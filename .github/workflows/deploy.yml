@@ -54,6 +54,8 @@ jobs:
             sed -i "s|^TENDERAI_JWT_SECRET=.*|TENDERAI_JWT_SECRET=${TENDERAI_JWT_SECRET}|" .env.prod
             sed -i "s|^TENDERAI_ADMIN_PASSWORD=.*|TENDERAI_ADMIN_PASSWORD=${TENDERAI_ADMIN_PASSWORD}|" .env.prod
             sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=${IMAGE_TAG}|" .env.prod
+            # Ensure .env exists (base compose requires it; actual vars come from .env.prod via server override)
+            touch .env
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             set -a; source .env.prod; set +a
             docker compose --env-file .env.prod down --remove-orphans || true
@@ -115,10 +117,12 @@ jobs:
             set -e
             cd ${DEPLOY_PATH}
             git config pull.ff only
-            git pull origin main
+            git pull origin staging
             sed -i "s|^TENDERAI_JWT_SECRET=.*|TENDERAI_JWT_SECRET=${TENDERAI_JWT_SECRET}|" .env.staging
             sed -i "s|^TENDERAI_ADMIN_PASSWORD=.*|TENDERAI_ADMIN_PASSWORD=${TENDERAI_ADMIN_PASSWORD}|" .env.staging
             sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=${IMAGE_TAG}|" .env.staging
+            # Ensure .env exists (base compose requires it; actual vars come from .env.staging via server override)
+            touch .env
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             set -a; source .env.staging; set +a
             docker compose --env-file .env.staging down --remove-orphans || true
