@@ -51,6 +51,8 @@ jobs:
             cd ${DEPLOY_PATH}
             git checkout main
             git pull origin main
+            # Copy unified server override (services read .env.prod via env_file: .env.${ENV_NAME})
+            cp docker-compose.server.yml docker-compose.override.yml
             sed -i "s|^TENDERAI_JWT_SECRET=.*|TENDERAI_JWT_SECRET=${TENDERAI_JWT_SECRET}|" .env.prod
             sed -i "s|^TENDERAI_ADMIN_PASSWORD=.*|TENDERAI_ADMIN_PASSWORD=${TENDERAI_ADMIN_PASSWORD}|" .env.prod
             sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=${IMAGE_TAG}|" .env.prod
@@ -118,6 +120,8 @@ jobs:
             cd ${DEPLOY_PATH}
             git config pull.ff only
             git pull origin staging
+            # Copy unified server override (services read .env.staging via env_file: .env.${ENV_NAME})
+            cp docker-compose.server.yml docker-compose.override.yml
             sed -i "s|^TENDERAI_JWT_SECRET=.*|TENDERAI_JWT_SECRET=${TENDERAI_JWT_SECRET}|" .env.staging
             sed -i "s|^TENDERAI_ADMIN_PASSWORD=.*|TENDERAI_ADMIN_PASSWORD=${TENDERAI_ADMIN_PASSWORD}|" .env.staging
             sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=${IMAGE_TAG}|" .env.staging
