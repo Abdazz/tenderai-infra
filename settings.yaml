@@ -66,7 +66,7 @@ pipeline:
   # false locally for testing, but the default protects us from inadvertently
   # crawling pages the source explicitly disallows.
   respect_robots_txt: true
-  user_agent: "TenderAI-BF/1.0 (+https://github.com/your-org/tenderai-bf)"
+  user_agent: "TenderAI/1.0 (+https://github.com/your-org/tenderai)"
 
 # Scheduler Configuration
 scheduler:

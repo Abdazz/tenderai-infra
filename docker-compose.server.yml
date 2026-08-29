@@ -42,7 +42,7 @@ services:
       - tenderai-network
 
   api:
-    image: ghcr.io/abdazz/tenderai-bf-api:${IMAGE_TAG}
+    image: ghcr.io/abdazz/tenderai-api:${IMAGE_TAG}
     container_name: ${ENV_NAME}_api
     env_file: .env.${ENV_NAME}
     environment:
@@ -54,14 +54,14 @@ services:
     command: ["uvicorn", "tenderai_bf.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
   frontend:
-    image: ghcr.io/abdazz/tenderai-bf-frontend:${IMAGE_TAG}
+    image: ghcr.io/abdazz/tenderai-frontend:${IMAGE_TAG}
     container_name: ${ENV_NAME}_frontend
     env_file: .env.${ENV_NAME}
     environment:
       - ENVIRONMENT=${ENVIRONMENT}
 
   worker:
-    image: ghcr.io/abdazz/tenderai-bf-worker:${IMAGE_TAG}
+    image: ghcr.io/abdazz/tenderai-worker:${IMAGE_TAG}
     container_name: ${ENV_NAME}_worker
     env_file: .env.${ENV_NAME}
     command: ["python", "-m", "tenderai_bf.cli", "run-scheduler"]
