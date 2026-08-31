@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Infrastructure de TenderAI BF : Docker, nginx/apache2, configuration opérationnelle (`settings.yaml`), CI/CD de déploiement. Ce repo ne contient aucun code applicatif et ne construit aucune image — il consomme les images publiées par `tenderai-backend` (api, worker) et `tenderai-frontend` (frontend) sur GHCR.
+Infrastructure de TenderAI : Docker, nginx/apache2, configuration opérationnelle (`settings.yaml`), CI/CD de déploiement. Ce repo ne contient aucun code applicatif et ne construit aucune image — il consomme les images publiées par `tenderai-backend` (api, worker) et `tenderai-frontend` (frontend) sur GHCR.
 
 Fait partie de l'architecture à 3 repos : `tenderai-backend`, `tenderai-frontend`, `tenderai-infra` (ce repo).
 
