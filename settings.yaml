@@ -630,7 +630,7 @@ logging:
       backupCount: 5
       
   loggers:
-    tenderai_bf:
+    tenderai:
       level: DEBUG
       handlers: [console, file]
       propagate: false

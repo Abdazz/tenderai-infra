@@ -51,7 +51,7 @@ services:
       - ./settings.yaml:/app/settings.yaml:ro
       - ./logs:/app/logs
       - api-cache:/app/cache
-    command: ["uvicorn", "tenderai_bf.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    command: ["uvicorn", "tenderai.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
   frontend:
     image: ghcr.io/abdazz/tenderai-frontend:${IMAGE_TAG}
@@ -64,7 +64,7 @@ services:
     image: ghcr.io/abdazz/tenderai-worker:${IMAGE_TAG}
     container_name: ${ENV_NAME}_worker
     env_file: .env.${ENV_NAME}
-    command: ["python", "-m", "tenderai_bf.cli", "run-scheduler"]
+    command: ["python", "-m", "tenderai.cli", "run-scheduler"]
     environment:
       - ENVIRONMENT=${ENVIRONMENT}
     volumes:
