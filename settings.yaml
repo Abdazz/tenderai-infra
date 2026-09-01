@@ -629,6 +629,11 @@ logging:
       maxBytes: 10485760  # 10MB
       backupCount: 5
       
+  # NOTE (2026-09-01): this logging.loggers block is not currently read by
+  # tenderai-backend — config.py only loads the `ocr` key from this file.
+  # Real logger config lives in tenderai-backend/src/tenderai/logging.py.
+  # Kept in sync with the package name for consistency, not because it
+  # has a runtime effect today.
   loggers:
     tenderai:
       level: DEBUG
