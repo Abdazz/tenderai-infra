@@ -62,10 +62,16 @@ jobs:
             set -a; source .env.prod; set +a
             docker compose --env-file .env.prod down --remove-orphans || true
             # ./logs is bind-mounted into /app/logs (docker-compose.server.yml),
-            # shadowing whatever ownership the image bakes in — a fresh clone or
-            # first `docker compose up` creates it root-owned, so every node's
-            # log_node_output() write fails silently until this runs (constat #29).
-            mkdir -p logs/nodes && chmod -R 777 logs
+            # shadowing whatever ownership the image bakes in — a fresh clone,
+            # or the container itself writing as its own uid, leaves it owned
+            # by root or a uid the deploy user can't chmod directly (no
+            # passwordless sudo here) — so every node's log_node_output()
+            # write fails silently until this runs (constat #29). A throwaway
+            # root container can always fix a bind-mounted path regardless of
+            # current host-side ownership; the deploy user only needs to be
+            # in the docker group, which it already is.
+            mkdir -p logs/nodes
+            docker run --rm -v "$(pwd)/logs:/fix-logs" alpine chmod -R 777 /fix-logs
             docker compose --env-file .env.prod pull api frontend worker || true
             docker compose --env-file .env.prod up -d postgres minio createbuckets
             until docker compose --env-file .env.prod exec -T postgres pg_isready -U \${POSTGRES_USER:-tenderai} -d \${POSTGRES_DB:-tenderai_bf} </dev/null; do sleep 3; done
@@ -135,7 +141,8 @@ jobs:
             set -a; source .env.staging; set +a
             docker compose --env-file .env.staging down --remove-orphans || true
             # See the production section above for why this is needed (constat #29).
-            mkdir -p logs/nodes && chmod -R 777 logs
+            mkdir -p logs/nodes
+            docker run --rm -v "$(pwd)/logs:/fix-logs" alpine chmod -R 777 /fix-logs
             docker compose --env-file .env.staging pull api frontend worker || true
             docker compose --env-file .env.staging up -d postgres minio createbuckets
             until docker compose --env-file .env.staging exec -T postgres pg_isready -U \${POSTGRES_USER:-tenderai} -d \${POSTGRES_DB:-tenderai_bf} </dev/null; do sleep 3; done
