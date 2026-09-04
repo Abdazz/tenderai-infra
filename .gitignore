@@ -1,0 +1,15 @@
+# The backend and frontend repos live nested here as independent git
+# checkouts (their own remotes, their own history) — never tracked by this
+# (tenderai-infra) repo itself.
+/tenderai-backend/
+/tenderai-frontend/
+
+# Claude Code local tooling state — per-machine, not infra config.
+/.claude/
+/.playwright-mcp/
+/.remember/
+
+# Real secrets copied from the .*.example templates for local dev/server use.
+.env
+.env.prod
+.env.staging

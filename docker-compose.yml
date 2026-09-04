@@ -57,7 +57,7 @@ services:
 
   api:
     build:
-      context: ../tenderai-backend
+      context: ./tenderai-backend
       dockerfile: Dockerfile.api
     container_name: tenderai-api
     env_file: .env
@@ -89,7 +89,7 @@ services:
 
   frontend:
     build:
-      context: ../tenderai-frontend
+      context: ./tenderai-frontend
       dockerfile: Dockerfile.frontend
     container_name: tenderai-frontend
     env_file: .env
@@ -111,7 +111,7 @@ services:
 
   worker:
     build:
-      context: ../tenderai-backend
+      context: ./tenderai-backend
       dockerfile: Dockerfile.worker
     container_name: tenderai-worker
     env_file: .env
